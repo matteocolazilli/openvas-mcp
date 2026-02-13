@@ -1,0 +1,18 @@
+[project]
+name = "openvas-mcp"
+version = "0.1.0"
+description = "MCP server for Greenbone OpenVAS"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp==2.14.5",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "python-gvm==26.9.1",
+    "xsdata>=26.1",
+]
+
+[dependency-groups]
+dev = [
+    "xsdata[cli]>=26.1",
+]

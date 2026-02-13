@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# Virtual environments
+.venv/
+venv/
+
+# Python artifacts
+__pycache__/
+
+# Docker
+Dockerfile
+
+# Environment variables
+.env
+.env.example
+
+# README.md
+README.md
+
+# License file
+LICENSE

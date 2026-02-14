@@ -17,4 +17,4 @@ ENV UV_CACHE_DIR=/tmp/.cache/uv
 
 RUN uv sync --no-dev
 
-CMD ["uv", "run", "--frozen", "--no-sync", "-m", "src.main"]
+CMD ["uv", "run", "--no-dev", "-m", "src.main"]

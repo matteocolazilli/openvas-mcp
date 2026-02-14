@@ -43,28 +43,23 @@ These are registered with tag `low_level` and can be enabled/disabled via config
 ## Project Structure
 
 ```text
-.
-├── src/
-│   ├── main.py                  # App entrypoint (stdio MCP server)
-│   ├── config.py                # Env-based settings (GMP_USERNAME, GMP_PASSWORD, LOW_LEVEL_TOOLS, ...)
-│   ├── constants.py             # Default UUIDs and report format constants
-│   ├── core/
-│   │   └── mcp_server.py        # MCP wiring, GVM connection, tool registration
-│   ├── services/
-│   │   └── gvm_adapter.py       # Typed wrapper around python-gvm + XML parsing
-│   ├── tools/
-│   │   ├── vuln_scan_tools.py   # High-level scan orchestration tools
-│   │   └── low_level_tools.py   # Optional low-level tools (LOW_LEVEL_TOOLS=True)
-│   ├── models/
-│   │   └── generated/           # Auto-generated dataclasses (xsdata output)
-│   └── utils/
-│       ├── logging_config.py    # Logging setup and helper functions
-│       └── utilities.py         # Misc utilities (Regex, Sanitization, ...)
-├── pyproject.toml
-├── uv.lock
-├── Dockerfile
-├── README.md
-└── LICENSE
+src/
+├── main.py                  # App entrypoint (stdio MCP server)
+├── config.py                # Env-based settings (GMP_USERNAME, GMP_PASSWORD, LOW_LEVEL_TOOLS, ...)
+├── constants.py             # Default UUIDs and report format constants
+├── core/
+│   └── mcp_server.py        # MCP wiring, GVM connection, tool registration
+├── services/
+│   └── gvm_adapter.py       # Typed wrapper around python-gvm + XML parsing
+├── tools/
+│   ├── vuln_scan_tools.py   # High-level scan orchestration tools
+│   └── low_level_tools.py   # Optional low-level tools (LOW_LEVEL_TOOLS=True)
+├── models/
+│   └── generated/           # Auto-generated dataclasses (xsdata output)
+└── utils/
+    ├── logging_config.py    # Logging setup and helper functions
+    └── utilities.py         # Misc utilities (Regex, Sanitization, ...)
+
 ```
 
 ## Requirements

@@ -71,19 +71,17 @@ These are registered with tag `low_level` and can be enabled/disabled via config
 
 - Docker Engine + Docker Compose plugin
 - A Greenbone/OpenVAS instance with a reachable `gvmd` Unix socket
-- Tested setup: Greenbone Community Edition deployed with the official container setup:
-  https://greenbone.github.io/docs/latest/22.4/container/
 - Valid GMP credentials
 
 ## Installation
 
 ### Compatibility
 
-This server has been tested only with Greenbone/OpenVAS deployed via containers, particularly Greenbone Community Edition.
+This server has been tested only with Greenbone/OpenVAS deployed via containers, particularly Greenbone Community Edition with the official container setup: https://greenbone.github.io/docs/latest/22.4/container/
 
 ### Prerequisites
 
-Ensure the official Greenbone Community Edition container setup is running,:
+Ensure the official Greenbone Community Edition container setup is running by executing the following command in the directory where you have the `docker-compose.yml` for Greenbone:
   
 ```bash
 docker compose -f <path-to-greenbone-compose>/docker-compose.yml up -d

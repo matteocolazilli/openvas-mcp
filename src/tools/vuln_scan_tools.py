@@ -49,19 +49,10 @@ def _summarize_task_status(task: models.Task) -> dict[str, Any]:
         "result_count": task.result_count,
     }
 
-    report = None
-    if task.current_report and task.current_report.report:
-        report = task.current_report.report
-    elif task.last_report and task.last_report.report:
-        report = task.last_report.report
-
-    report_summary = _summarize_report_metadata(report) if report else None
-
     return _remove_none_values(
         {
             "task": task_summary,
             "target": target_summary,
-            "report": report_summary,
         }
     )
 

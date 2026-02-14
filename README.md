@@ -172,4 +172,9 @@ Recommended workflow:
 
 This project is licensed under **GNU GPL v3.0 or later**.
 
-See [`LICENSE`](LICENSE) for the full license text.
+See [`LICENSE.md`](LICENSE.md) for the full license text.
+
+## Third-Party Notices
+
+This project includes and depends on third-party open-source software.
+See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) for details on direct dependencies and their licenses.

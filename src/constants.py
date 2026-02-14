@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Matteo Colazilli
+
 from gvm.protocols.gmp.requests.v227 import ReportFormatType
 
 OPENVAS_SCANNER_ID = "08b69003-5fc2-4037-a479-93b440211c73"

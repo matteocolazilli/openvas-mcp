@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Matteo Colazilli
+
 """Tool handlers for vulnerability scanning.
 """
 import base64 as b64

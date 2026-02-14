@@ -1,4 +1,11 @@
-"""Utility helpers to interact with the Greenbone Management Protocol (GMP)."""
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Matteo Colazilli
+# Portions adapted from python-gvm, Copyright (C) Greenbone AG,
+# licensed under GPL-3.0-or-later.
+
+"""
+Utility helpers to interact with the Greenbone Management Protocol (GMP).
+"""
 
 from __future__ import annotations
 

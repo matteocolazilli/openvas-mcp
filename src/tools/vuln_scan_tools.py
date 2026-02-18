@@ -437,7 +437,7 @@ def register_vuln_scan_tools(
         Useful for quickly rescanning the same target without needing to create a new task or target.
         Returns a dictionary containing the target ID, task ID, and new report ID for the rescan task."""
     )
-    def rescan_target(
+    async def rescan_target(
         target_id: Annotated[str, Field(description="The ID of the target to be rescanned.")],
     ) -> dict[str, Any]:
 
@@ -491,7 +491,7 @@ def register_vuln_scan_tools(
         Returns a dictionary summarizing new, resolved, and persistent vulnerabilities.
         """
     )
-    def delta_report(
+    async def delta_report(
         task_id: Annotated[str, Field(description="The ID of the task for which to generate the delta report.")],
     ) -> dict[str, Any]:
     

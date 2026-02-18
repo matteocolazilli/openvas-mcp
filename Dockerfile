@@ -9,12 +9,14 @@ RUN addgroup --gid 1001 mcp && \
 
 WORKDIR /openvas-mcp
 
-COPY --chown=mcp:mcp . .
+COPY --chown=mcp:mcp ./pyproject.toml ./uv.lock ./
 
 USER mcp
 
 ENV UV_CACHE_DIR=/tmp/.cache/uv
 
 RUN uv sync --no-dev
+
+COPY ./src ./src
 
 CMD ["uv", "run", "--no-dev", "-m", "src.main"]

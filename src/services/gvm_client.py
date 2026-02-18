@@ -21,6 +21,7 @@ from contextlib import contextmanager
 from dataclasses import MISSING
 from typing import (
     Any,
+    Iterable,
     Optional,
     TypeVar, 
     Union,
@@ -34,7 +35,7 @@ from typing import (
 
 from gvm.protocols.gmp.requests.v227 import AliveTest
 from gvm.utils import SupportsStr
-from gvm.connections._connection import AbstractGvmConnection
+from gvm.connections import UnixSocketConnection, DEFAULT_UNIX_SOCKET_PATH
 from gvm.errors import GvmError
 from gvm.protocols.gmp import GMPv227 as Gmp
 from gvm.transforms import EtreeCheckCommandTransform
@@ -58,11 +59,10 @@ class GvmClient:
 
     def __init__(
         self,
-        connection: AbstractGvmConnection,
         username: str,
         password: str,
     ) -> None:
-        self._connection = connection
+        self._connection = UnixSocketConnection(path=DEFAULT_UNIX_SOCKET_PATH)
         self._username = username
         self._password = password
 
@@ -171,13 +171,13 @@ class GvmClient:
                 gmp.authenticate(self._username, self._password)
             yield gmp
 
-    def _check_method_args(self, command: Any, args: set[str]) -> bool:
+    def _check_method_args(self, command: Any, args: Iterable[str]) -> bool:
         """
         Check whether at least one argument is supported by a command signature.
 
         Args:
             command (Any): Callable GMP command.
-            args (set[str]): Argument names to validate.
+            args (Iterable[str]): Argument names to validate.
 
         Returns:
             bool: True if any provided argument exists in the command signature.

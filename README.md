@@ -116,7 +116,7 @@ You can use this `.env` by passing it at runtime with `--env-file` to the `docke
 The server reads configuration from the following environment variables, which if not set it falls back to defaults:
 
 - `GMP_USERNAME`: GMP username (default: `admin`)
-- `GMP_PASSWORD`: GMP password (default: `admin`)
+- `GMP_PASSWORD`: GMP password (required: no default, must be set)
 - `LOG_LEVEL`: application log level (default: `INFO`)
 - `LOW_LEVEL_TOOLS`: expose low-level MCP tools (`True`/`False`, default: `False`)
 

@@ -12,7 +12,9 @@ def main():
     
     mcp_config = load_mcp_config()
 
-    mcp_server = OpenVASMCP("OpenVAS MCP Server", exclude_tags={"low_level" if not mcp_config.LOW_LEVEL_TOOLS else None})
+    exclude_tags = {"low_level"} if not mcp_config.LOW_LEVEL_TOOLS else set()
+    
+    mcp_server = OpenVASMCP("OpenVAS MCP Server", exclude_tags=exclude_tags)
 
     mcp_server.run(transport="stdio")
 

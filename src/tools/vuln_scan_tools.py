@@ -232,8 +232,8 @@ def register_vuln_scan_tools(
     :rtype: None
     '''
     @mcp.tool(
-        name="quick_first_scan",
-        title="Quick first scan",
+        name="start_scan",
+        title="Start scan",
         description=
         """
         Create the minimal target/task resources and start a focused vulnerability scan.
@@ -246,7 +246,7 @@ def register_vuln_scan_tools(
         Note: This tool does not wait for scan completion; use "scan_status" tool to poll for status.
         """
     )
-    async def quick_first_scan(
+    async def start_scan(
         hosts: Annotated[
             list[str],
             Field(

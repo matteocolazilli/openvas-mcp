@@ -25,7 +25,7 @@ Contributions are welcome: feel free to open **Issues** and submit **Pull Reques
 ### Default (high-level) tools
 
 These are always registered:
-- `quick_first_scan`
+- `start_scan`
 - `scan_status`
 - `fetch_latest_report`
 - `rescan_target`

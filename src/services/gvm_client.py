@@ -63,6 +63,7 @@ class GvmClient:
         password: str,
     ) -> None:
         self._connection = UnixSocketConnection(path=DEFAULT_UNIX_SOCKET_PATH)
+        self._transform = EtreeCheckCommandTransform()
         self._username = username
         self._password = password
 
@@ -165,7 +166,7 @@ class GvmClient:
             Generator[Gmp, None, None]: Active GMP session.
         """
         with Gmp(
-            connection=self._connection, transform=EtreeCheckCommandTransform()
+            connection=self._connection, transform=self._transform
         ) as gmp:
             if authenticate and self._username and self._password:
                 gmp.authenticate(self._username, self._password)

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Matteo Colazilli
+
 import re
 
 _MAX_LOG_STRING_LENGTH = 512

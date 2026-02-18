@@ -7,7 +7,7 @@ from fastmcp.server import FastMCP
 from gvm.connections import UnixSocketConnection
 
 from src.config import load_gvm_config
-from src.services.gvm_adapter import GvmAdapter
+from src.services.gvm_client import GvmClient
 from src.tools.vuln_scan_tools import register_vuln_scan_tools
 from src.tools.low_level_tools import register_low_level_tools
 
@@ -24,17 +24,17 @@ class OpenVASMCP(FastMCP):
 
         connection = UnixSocketConnection()
 
-        self.gvm_adapter = GvmAdapter(
+        self.gvm_client = GvmClient(
             connection=connection,
             username=gvm_config.GMP_USERNAME,
             password=gvm_config.GMP_PASSWORD,
         )
 
-        register_low_level_tools(self, self.gvm_adapter)
-        register_vuln_scan_tools(self, self.gvm_adapter)
+        register_low_level_tools(self, self.gvm_client)
+        register_vuln_scan_tools(self, self.gvm_client)
 
 
     @property
-    def gvm(self) -> GvmAdapter:
-        """Access the GVM adapter instance."""
-        return self.gvm_adapter
+    def gvm(self) -> GvmClient:
+        """Access the GVM client instance."""
+        return self.gvm_client

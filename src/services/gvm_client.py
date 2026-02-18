@@ -49,9 +49,10 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class GvmAdapter:
+class GvmClient:
     """
-    Adapter for interacting with the Greenbone Management Protocol (GMP).
+    Client for interacting with the Greenbone Management Protocol (GMP).
+
     Provides methods for managing targets, tasks, and other entities in GVM.
     """
 
@@ -77,16 +78,17 @@ class GvmAdapter:
     @functools.lru_cache(maxsize=1024)
     def _resolved_type_hints(clazz: type[Any]) -> dict[str, Any]:
         """
-        Return the resolved type hints for a class, including any generic type.        
-        
-        :param clazz: The class to resolve type hints for.
-        :type clazz: type[Any]
-        :return: A dictionary mapping field names to their resolved types.
-        :rtype: dict[str, Any]
+        Return resolved type hints for a class.
+
+        Args:
+            clazz (type[Any]): Class to resolve type hints for.
+
+        Returns:
+            dict[str, Any]: Mapping of field names to resolved types.
         """
         try:
             return get_type_hints(clazz)
-        except Exception:  # noqa: BLE001
+        except TypeError:
             return {}
 
     @staticmethod
@@ -94,10 +96,11 @@ class GvmAdapter:
         """
         Check if a field type allows None values.
 
-        :param field_type: The type of the field to check.
-        :type field_type: Any
-        :return: True if the field type allows None, False otherwise.
-        :rtype: bool
+        Args:
+            field_type (Any): Field type to inspect.
+
+        Returns:
+            bool: True if the field type accepts None, otherwise False.
         """
         if field_type is Any:
             return True
@@ -109,27 +112,32 @@ class GvmAdapter:
     @staticmethod
     def _xsdata_class_factory(clazz: type[T], params: dict[str, Any]) -> T:
         """
-        Factory function for xsdata to instantiate dataclasses, 
-        with special handling for missing fields and empty strings that should be treated as None.        
-        
-        :param clazz: The class to instantiate.
-        :type clazz: type[T]
-        :param params: The parameters to initialize the dataclass with.
-        :type params: dict[str, Any]
-        :return: An instance of the specified dataclass with the provided parameters.
-        :rtype: T
+        Instantiate dataclasses for xsdata parsing.
+
+        Empty strings are converted to None when the target field supports None,
+        and missing required init fields are populated with None.
+
+        Args:
+            clazz (type[T]): Dataclass type to instantiate.
+            params (dict[str, Any]): Constructor parameters from parsed XML.
+
+        Returns:
+            T: Instantiated dataclass object.
+
+        Raises:
+            TypeError: If clazz is not a dataclass.
         """
         if not dataclasses.is_dataclass(clazz):
             raise TypeError(
                 f"xsdata class factory received a non-dataclass type: {clazz!r}"
             )
 
-        resolved = GvmAdapter._resolved_type_hints(clazz)
+        resolved = GvmClient._resolved_type_hints(clazz)
         field_types = {f.name: resolved.get(f.name, f.type) for f in dataclasses.fields(clazz)}
 
         cleaned: dict[str, Any] = {}
         for key, value in params.items():
-            if value == "" and GvmAdapter._allows_none(field_types.get(key, Any)):
+            if value == "" and GvmClient._allows_none(field_types.get(key, Any)):
                 cleaned[key] = None
             else:
                 cleaned[key] = value
@@ -147,7 +155,15 @@ class GvmAdapter:
 
     @contextmanager
     def _session(self, authenticate: bool = True) -> Generator[Gmp, None, None]:
-        """Yield an authenticated GMP session."""
+        """
+        Yield a GMP session.
+
+        Args:
+            authenticate (bool): Whether to authenticate with configured credentials.
+
+        Yields:
+            Generator[Gmp, None, None]: Active GMP session.
+        """
         with Gmp(
             connection=self._connection, transform=EtreeCheckCommandTransform()
         ) as gmp:
@@ -156,7 +172,19 @@ class GvmAdapter:
             yield gmp
 
     def _check_method_args(self, command: Any, args: set[str]) -> bool:
-        """Check that the provided arguments belong the method signature."""
+        """
+        Check whether at least one argument is supported by a command signature.
+
+        Args:
+            command (Any): Callable GMP command.
+            args (set[str]): Argument names to validate.
+
+        Returns:
+            bool: True if any provided argument exists in the command signature.
+
+        Raises:
+            GvmError: If command is not callable.
+        """
         if not callable(command):
             raise GvmError(f"Command {command} is not callable")
 
@@ -167,11 +195,12 @@ class GvmAdapter:
         return False
     
     def _add_rows_to_filter_string(self, command: Any, kwargs: dict[str, Any]) -> None:
-        """Add 'rows=-1' to the filter_string argument if the command supports it.
-        
-        Args:            
-            command: The GMP command to check for filter_string support.
-            kwargs: The keyword arguments to potentially modify by adding 'rows=-1' to the filter_string.
+        """
+        Add `rows=-1` to `filter_string` when supported and not already specified.
+
+        Args:
+            command (Any): GMP command to inspect.
+            kwargs (dict[str, Any]): Keyword arguments to mutate in place.
         """
 
         if self._check_method_args(command, ["filter_string"]):
@@ -187,7 +216,20 @@ class GvmAdapter:
     def _call(
         self, method_name: str, *, authenticate: bool = True, **kwargs: Any
     ) -> etree.Element:
-        """Invoke a GMP method with the given arguments."""
+        """
+        Invoke a GMP method with the given arguments.
+
+        Args:
+            method_name (str): GMP method name to invoke.
+            authenticate (bool): Whether to authenticate the session first.
+            **kwargs (Any): Keyword arguments forwarded to the GMP method.
+
+        Returns:
+            etree.Element: XML response returned by GMP.
+
+        Raises:
+            GvmError: If the method does not exist or GMP call fails.
+        """
         try:
             with self._session(authenticate=authenticate) as gmp:
                 command = getattr(gmp, method_name, None)
@@ -204,9 +246,28 @@ class GvmAdapter:
             raise
 
     def _xml_text(self, root: etree.Element) -> str:
+        """
+        Convert an XML element to a Unicode string.
+
+        Args:
+            root (etree.Element): XML root element.
+
+        Returns:
+            str: Serialized XML.
+        """
         return etree.tostring(root, encoding="unicode")
 
     def _parse(self, root: etree.Element, cls: type[T]) -> T:
+        """
+        Parse an XML element into a typed model.
+
+        Args:
+            root (etree.Element): XML root element to parse.
+            cls (type[T]): Target model class.
+
+        Returns:
+            T: Parsed model instance.
+        """
         return self._xml_parser.from_string(self._xml_text(root), cls)
 
     def get_targets(
@@ -220,10 +281,13 @@ class GvmAdapter:
         """Request a list of targets.
 
         Args:
-            filter_string: Filter term to use for the query.
-            filter_id: UUID of an existing filter to use for the query.
-            trash: Whether to include targets in the trashcan.
-            tasks: Whether to include list of tasks that use the target.
+            filter_string (Optional[str]): Filter term for the query.
+            filter_id (Optional[EntityID]): Existing filter UUID for the query.
+            trash (Optional[bool]): Whether to include targets in the trashcan.
+            tasks (Optional[bool]): Whether to include tasks using each target.
+
+        Returns:
+            models.GetTargetsResponse: Targets response payload.
         """
         root = self._call(
             "get_targets",
@@ -240,8 +304,11 @@ class GvmAdapter:
         """Request a single target.
 
         Args:
-            target_id: UUID of the target to request.
-            tasks: Whether to include list of tasks that use the target
+            target_id (EntityID): Target UUID to request.
+            tasks (Optional[bool]): Whether to include tasks using the target.
+
+        Returns:
+            models.GetTargetsResponse: Target response payload.
         """
         root = self._call("get_target", target_id=target_id, tasks=tasks)
         return self._parse(root, models.GetTargetsResponse)
@@ -256,17 +323,21 @@ class GvmAdapter:
         schedules_only: Optional[bool] = None,
         ignore_pagination: Optional[bool] = None,
     ) -> models.GetTasksResponse:
-        """Request a list of tasks
+        """
+        Request a list of tasks.
 
         Args:
-            filter_string: Filter term to use for the query
-            filter_id: UUID of an existing filter to use for the query
-            trash: Whether to get the trashcan tasks instead
-            details: Whether to include full task details
-            schedules_only: Whether to only include id, name and schedule
-                details
-            ignore_pagination: Whether to ignore pagination settings (filter
-                terms "first" and "rows"). Default is False.
+            filter_string (Optional[str]): Filter term for the query.
+            filter_id (Optional[EntityID]): Existing filter UUID for the query.
+            trash (Optional[bool]): Whether to get trashcan tasks instead.
+            details (Optional[bool]): Whether to include full task details.
+            schedules_only (Optional[bool]): Whether to include only id, name,
+                and schedule details.
+            ignore_pagination (Optional[bool]): Whether to ignore `first` and
+                `rows` filter terms.
+
+        Returns:
+            models.GetTasksResponse: Tasks response payload.
         """
         root = self._call(
             "get_tasks",
@@ -280,10 +351,14 @@ class GvmAdapter:
         return self._parse(root, models.GetTasksResponse)
 
     def get_task(self, task_id: EntityID) -> models.GetTasksResponse:
-        """Request a single task
+        """
+        Request a single task.
 
         Args:
-            task_id: UUID of an existing task
+            task_id (EntityID): Existing task UUID.
+
+        Returns:
+            models.GetTasksResponse: Task response payload.
         """
         root = self._call("get_task", task_id=task_id)
         return self._parse(root, models.GetTasksResponse)
@@ -297,14 +372,18 @@ class GvmAdapter:
         targets: Optional[bool] = None,
         trash: Optional[bool] = None,
     ) -> models.GetPortListsResponse:
-        """Request a list of port lists
+        """
+        Request a list of port lists.
 
         Args:
-            filter_string: Filter term to use for the query
-            filter_id: UUID of an existing filter to use for the query
-            details: Whether to include full port list details
-            targets: Whether to include targets using this port list
-            trash: Whether to get port lists in the trashcan instead
+            filter_string (Optional[str]): Filter term for the query.
+            filter_id (Optional[EntityID]): Existing filter UUID for the query.
+            details (Optional[bool]): Whether to include full port-list details.
+            targets (Optional[bool]): Whether to include targets using the port list.
+            trash (Optional[bool]): Whether to get trashcan port lists instead.
+
+        Returns:
+            models.GetPortListsResponse: Port lists response payload.
         """
         root = self._call(
             "get_port_lists",
@@ -336,27 +415,32 @@ class GvmAdapter:
         port_range: Optional[str] = None,
         port_list_id: Optional[EntityID] = None,
         ) -> models.CreateTargetResponse:
-        """Create a new target
+        """
+        Create a new target.
 
         Args:
-            name: Name of the target
-            asset_hosts_filter: Filter to select target host from assets hosts
-            hosts: List of hosts addresses to scan
-            exclude_hosts: List of hosts addresses to exclude from scan
-            comment: Comment for the target
-            ssh_credential_id: UUID of a ssh credential to use on target
-            ssh_credential_port: The port to use for ssh credential
-            smb_credential_id: UUID of a smb credential to use on target
-            snmp_credential_id: UUID of a snmp credential to use on target
-            esxi_credential_id: UUID of a esxi credential to use on target
-            alive_test: Which alive test to use
-            allow_simultaneous_ips: Whether to scan multiple IPs of the
-                same host simultaneously
-            reverse_lookup_only: Whether to scan only hosts that have names
-            reverse_lookup_unify: Whether to scan only one IP when multiple IPs
-                have the same name.
-            port_range: Port range for the target
-            port_list_id: UUID of the port list to use on target
+            name (str): Target name.
+            asset_hosts_filter (Optional[str]): Filter selecting target hosts from assets.
+            hosts (Optional[list[str]]): Host addresses to scan.
+            comment (Optional[str]): Target comment.
+            exclude_hosts (Optional[list[str]]): Host addresses to exclude from scan.
+            ssh_credential_id (Optional[EntityID]): SSH credential UUID.
+            ssh_credential_port (Optional[Union[int, str]]): SSH port.
+            smb_credential_id (Optional[EntityID]): SMB credential UUID.
+            esxi_credential_id (Optional[EntityID]): ESXi credential UUID.
+            snmp_credential_id (Optional[EntityID]): SNMP credential UUID.
+            alive_test (Optional[Union[str, AliveTest]]): Alive test mode.
+            allow_simultaneous_ips (Optional[bool]): Whether to scan multiple IPs
+                of the same host simultaneously.
+            reverse_lookup_only (Optional[bool]): Whether to scan only hosts that
+                resolve to names.
+            reverse_lookup_unify (Optional[bool]): Whether to scan only one IP when
+                multiple IPs share the same name.
+            port_range (Optional[str]): Explicit port range.
+            port_list_id (Optional[EntityID]): Port list UUID to use.
+
+        Returns:
+            models.CreateTargetResponse: Target creation response payload.
         """
 
         root = self._call(
@@ -396,23 +480,28 @@ class GvmAdapter:
         observers: Optional[Sequence[str]] = None,
         preferences: Optional[Mapping[str, SupportsStr]] = None,
     ) -> models.CreateTaskResponse:
-        """Create a new scan task
+        """
+        Create a new scan task.
 
         Args:
-            name: Name of the new task
-            config_id: UUID of config to use by the task
-            target_id: UUID of target to be scanned
-            scanner_id: UUID of scanner to use for scanning the target
-            comment: Comment for the task
-            alterable: Whether the task should be alterable
-            alert_ids: List of UUIDs for alerts to be applied to the task
-            hosts_ordering: The order hosts are scanned in
-            schedule_id: UUID of a schedule when the task should be run.
-            schedule_periods: A limit to the number of times the task will be
-                scheduled, or 0 for no limit
-            observers: List of names or ids of users which should be allowed to
-                observe this task
-            preferences: Name/Value pairs of scanner preferences.
+            name (str): Task name.
+            config_id (EntityID): Scan config UUID.
+            target_id (EntityID): Target UUID.
+            scanner_id (EntityID): Scanner UUID.
+            alterable (Optional[bool]): Whether the task is alterable.
+            hosts_ordering (Optional[HostsOrdering]): Host scan order mode.
+            schedule_id (Optional[EntityID]): Schedule UUID for task execution.
+            alert_ids (Optional[Sequence[EntityID]]): Alert UUIDs applied to task.
+            comment (Optional[str]): Task comment.
+            schedule_periods (Optional[int]): Number of schedule repetitions,
+                or 0 for no limit.
+            observers (Optional[Sequence[str]]): User names or ids allowed to
+                observe this task.
+            preferences (Optional[Mapping[str, SupportsStr]]): Scanner preference
+                name/value pairs.
+
+        Returns:
+            models.CreateTaskResponse: Task creation response payload.
         """
         root = self._call(
             "create_task",
@@ -432,10 +521,14 @@ class GvmAdapter:
         return self._parse(root, models.CreateTaskResponse)
 
     def start_task(self, task_id: EntityID) -> models.StartTaskResponse:
-        """Start an existing task
+        """
+        Start an existing task.
 
         Args:
-            task_id: UUID of the task to be started
+            task_id (EntityID): Task UUID to start.
+
+        Returns:
+            models.StartTaskResponse: Task start response payload.
         """
         root = self._call("start_task", task_id=task_id)
         return self._parse(root, models.StartTaskResponse)
@@ -450,17 +543,20 @@ class GvmAdapter:
         ignore_pagination: Optional[bool] = None,
         details: Optional[bool] = None,
     ) -> models.GetReportsResponse:
-        """Request a list of reports
+        """
+        Request a list of reports.
 
         Args:
-            filter_string: Filter term to use for the query
-            filter_id: UUID of an existing filter to use for the query
-            note_details: If notes are included, whether to include note details
-            override_details: If overrides are included, whether to include
-                override details
-            ignore_pagination: Whether to ignore the filter terms "first" and
-                "rows".
-            details: Whether to exclude results
+            filter_string (Optional[str]): Filter term for the query.
+            filter_id (Optional[EntityID]): Existing filter UUID for the query.
+            note_details (Optional[bool]): Whether to include note details.
+            override_details (Optional[bool]): Whether to include override details.
+            ignore_pagination (Optional[bool]): Whether to ignore `first` and
+                `rows` filter terms.
+            details (Optional[bool]): Whether to include extra report details.
+
+        Returns:
+            models.GetReportsResponse: Reports response payload.
         """
         root = self._call(
             "get_reports",
@@ -484,19 +580,22 @@ class GvmAdapter:
         ignore_pagination: Optional[bool] = None,
         details: Optional[bool] = True,
     ) -> models.GetReportsResponse:
-        """Request a single report
+        """
+        Request a single report.
 
         Args:
-            report_id: UUID of an existing report
-            filter_string: Filter term to use to filter results in the report
-            filter_id: UUID of filter to use to filter results in the report
-            delta_report_id: UUID of an existing report to compare report to.
-            report_format_id: UUID of report format to use
-                              or ReportFormatType (enum)
-            ignore_pagination: Whether to ignore the filter terms "first" and
-                "rows".
-            details: Request additional report information details
-                     defaults to True
+            report_id (EntityID): Existing report UUID.
+            filter_string (Optional[str]): Filter term for report results.
+            filter_id (Optional[str]): Filter UUID for report results.
+            delta_report_id (Optional[EntityID]): Report UUID used for comparison.
+            report_format_id (Optional[Union[str, ReportFormatType]]): Report
+                format UUID or enum.
+            ignore_pagination (Optional[bool]): Whether to ignore `first` and
+                `rows` filter terms.
+            details (Optional[bool]): Whether to request additional report details.
+
+        Returns:
+            models.GetReportsResponse: Report response payload.
         """
         root = self._call(
             "get_report",
@@ -519,14 +618,18 @@ class GvmAdapter:
         trash: Optional[bool] = None,
         details: Optional[bool] = None,
     ) -> models.GetScannersResponse:
-        """Request a list of scanners
+        """
+        Request a list of scanners.
 
         Args:
-            filter_string: Filter term to use for the query
-            filter_id: UUID of an existing filter to use for the query
-            trash: Whether to get the trashcan scanners instead
-            details: Whether to include extra details like tasks using this
-                scanner
+            filter_string (Optional[str]): Filter term for the query.
+            filter_id (Optional[EntityID]): Existing filter UUID for the query.
+            trash (Optional[bool]): Whether to get trashcan scanners instead.
+            details (Optional[bool]): Whether to include extra details such as
+                tasks using each scanner.
+
+        Returns:
+            models.GetScannersResponse: Scanners response payload.
         """
         root = self._call(
             "get_scanners",
@@ -548,19 +651,23 @@ class GvmAdapter:
         preferences: Optional[bool] = None,
         tasks: Optional[bool] = None
     ) -> models.GetConfigsResponse:
-        """Request a list of scan configs
+        """
+        Request a list of scan configs.
 
         Args:
-            filter_string: Filter term to use for the query
-            filter_id: UUID of an existing filter to use for the query
-            trash: Whether to get the trashcan scan configs instead
-            details: Whether to get config families, preferences, nvt selectors
-                and tasks.
-            families: Whether to include the families if no details are
-                requested
-            preferences: Whether to include the preferences if no details are
-                requested
-            tasks: Whether to get tasks using this config
+            filter_string (Optional[str]): Filter term for the query.
+            filter_id (Optional[EntityID]): Existing filter UUID for the query.
+            trash (Optional[bool]): Whether to get trashcan scan configs instead.
+            details (Optional[bool]): Whether to include config families,
+                preferences, NVT selectors, and tasks.
+            families (Optional[bool]): Whether to include families when `details`
+                is not requested.
+            preferences (Optional[bool]): Whether to include preferences when
+                `details` is not requested.
+            tasks (Optional[bool]): Whether to include tasks using each config.
+
+        Returns:
+            models.GetConfigsResponse: Scan configs response payload.
         """
         root = self._call(
             "get_scan_configs",

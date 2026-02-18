@@ -17,7 +17,7 @@ from xsdata.models.datatype import XmlDateTime
 import src.models.generated as models
 import src.constants as const
 import src.utils.utilities as utils
-from src.services.gvm_adapter import GvmAdapter
+from src.services.gvm_client import GvmClient
 
 
 logger = logging.getLogger(__name__)
@@ -219,15 +219,15 @@ def _build_txt_report_output(
 
 def register_vuln_scan_tools(
     mcp: FastMCP,
-    gvm_adapter: GvmAdapter,
+    gvm_client: GvmClient,
 ) -> None:
     '''
     Registers vulnerability scan tools with the FastMCP instance.
 
     :param mcp: The FastMCP instance to register the tools with.
     :type mcp: FastMCP
-    :param gvm_adapter: The GvmAdapter instance to interact with GVM.
-    :type gvm_adapter: GvmAdapter
+    :param gvm_client: The GvmClient instance to interact with GVM.
+    :type gvm_client: GvmClient
     :return: None
     :rtype: None
     '''
@@ -305,7 +305,7 @@ def register_vuln_scan_tools(
             }
 
         try:
-            target_response = gvm_adapter.create_target(**create_target_kwargs)
+            target_response = gvm_client.create_target(**create_target_kwargs)
         except GvmError as exc:
             raise ToolError(f"Failed to create target: {str(exc)}") from exc
         
@@ -313,7 +313,7 @@ def register_vuln_scan_tools(
         target_id = target_response.id
         
         try:
-            task_response = gvm_adapter.create_task(
+            task_response = gvm_client.create_task(
                 name=task_name,
                 config_id=const.FULL_AND_FAST_SCAN_CONFIG_ID,
                 target_id=target_id,
@@ -325,7 +325,7 @@ def register_vuln_scan_tools(
         task_id = task_response.id
 
         try:
-            launch_response = gvm_adapter.start_task(task_id=task_id)
+            launch_response = gvm_client.start_task(task_id=task_id)
         except GvmError as exc:
             raise ToolError(f"Failed to start task: {str(exc)}") from exc
 
@@ -357,7 +357,7 @@ def register_vuln_scan_tools(
     ) -> dict[str, Any]:
         
         try:
-            task_response = gvm_adapter.get_task(task_id=task_id)
+            task_response = gvm_client.get_task(task_id=task_id)
         except RequiredArgument as exc:
             raise ToolError(f'Missing required argument: {exc.argument}') from exc
         except GvmError as exc:
@@ -382,7 +382,7 @@ def register_vuln_scan_tools(
     ) -> dict[str, Any]:
 
         try:
-            get_task_response = gvm_adapter.get_task(task_id=task_id)
+            get_task_response = gvm_client.get_task(task_id=task_id)
             tasks = get_task_response.task
             if not tasks:
                 raise ToolError(f"No task found for task ID {task_id}.")
@@ -402,7 +402,7 @@ def register_vuln_scan_tools(
             raise ToolError(f"No reports are available yet for task {task_id}.")
         
         try:
-            get_report_response = gvm_adapter.get_report(
+            get_report_response = gvm_client.get_report(
                 report_id=report_id,
                 # Filters by Critical, High, Medium, and Low severity issues
                 filter_string="levels=chml",
@@ -442,7 +442,7 @@ def register_vuln_scan_tools(
     ) -> dict[str, Any]:
 
         try:
-            get_tasks_response = gvm_adapter.get_tasks()
+            get_tasks_response = gvm_client.get_tasks()
         except RequiredArgument as exc:
             raise ToolError(f'Missing required argument: {exc.argument}') from exc
         except GvmError as exc:
@@ -458,7 +458,7 @@ def register_vuln_scan_tools(
         target_name = task.target.name  
 
         try:
-            start_task_response = gvm_adapter.start_task(task_id=task_id)
+            start_task_response = gvm_client.start_task(task_id=task_id)
         except GvmError as exc:
             raise ToolError(f"Failed to start task: {str(exc)}") from exc
 
@@ -496,7 +496,7 @@ def register_vuln_scan_tools(
     ) -> dict[str, Any]:
     
         try:
-            get_reports_response = gvm_adapter.get_reports(filter_string=f"~{task_id} sort-reverse=date", details=True)
+            get_reports_response = gvm_client.get_reports(filter_string=f"~{task_id} sort-reverse=date", details=True)
         except GvmError as exc:
             raise ToolError(f"Failed to retrieve reports: {str(exc)}") from exc
         
@@ -514,7 +514,7 @@ def register_vuln_scan_tools(
             raise ToolError(f"Current report and last report are identical for task ID {task_id}.")
 
         try:
-            delta_response = gvm_adapter.get_report(
+            delta_response = gvm_client.get_report(
                 report_id=last_report_id,
                 delta_report_id=previous_report_id,
                 filter_string="levels=chml",

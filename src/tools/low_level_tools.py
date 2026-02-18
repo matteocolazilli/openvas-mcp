@@ -9,7 +9,7 @@ from fastmcp.server import FastMCP
 from gvm.errors import GvmError, RequiredArgument
 from pydantic import Field
 
-from src.services.gvm_adapter import GvmAdapter
+from src.services.gvm_client import GvmClient
 import src.constants as const
 
 
@@ -17,15 +17,15 @@ logger = logging.getLogger(__name__)
 
 def register_low_level_tools(
         mcp: FastMCP, 
-        gvm_adapter: GvmAdapter,
+        gvm_client: GvmClient,
     ) -> None:
     """
     Registers low-level tools with the FastMCP instance.
 
     :param mcp: The FastMCP instance to register the tools with.
     :type mcp: FastMCP
-    :param gvm_adapter: The GvmAdapter instance to interact with GVM.
-    :type gvm_adapter: GvmAdapter
+    :param gvm_client: The GvmClient instance to interact with GVM.
+    :type gvm_client: GvmClient
     :return: None
     :rtype: None
     """
@@ -43,7 +43,7 @@ def register_low_level_tools(
         :rtype: dict[str, Any]
         """
         try:
-            response = gvm_adapter.get_targets()
+            response = gvm_client.get_targets()
         except Exception as exc:
             logger.error("Error in get_targets: %s", exc)
             raise ToolError(str(exc)) from exc
@@ -84,7 +84,7 @@ def register_low_level_tools(
         :rtype: dict[str, Any]
         """
         try:
-            response = gvm_adapter.get_target(target_id=target_id)
+            response = gvm_client.get_target(target_id=target_id)
             target = response.target[0]
             result = {
                 "id": target.id,
@@ -173,12 +173,12 @@ def register_low_level_tools(
         """
         try:
             if port_list_id:
-                response = gvm_adapter.create_target(name=name, hosts=hosts, port_list_id=port_list_id)
+                response = gvm_client.create_target(name=name, hosts=hosts, port_list_id=port_list_id)
             elif port_range_list:
-                response = gvm_adapter.create_target(name=name, hosts=hosts, port_range=port_range_list)
+                response = gvm_client.create_target(name=name, hosts=hosts, port_range=port_range_list)
             else:
                 port_list_id = const.ALL_IANA_ASSIGNED_TCP_PORT_LIST_ID
-                response = gvm_adapter.create_target(name=name, hosts=hosts, port_list_id=port_list_id)
+                response = gvm_client.create_target(name=name, hosts=hosts, port_list_id=port_list_id)
 
         except RequiredArgument as exc:
             raise ToolError(f"Missing required argument: {exc.argument}") from exc
@@ -211,7 +211,7 @@ def register_low_level_tools(
         :rtype: dict[str, Any]
         """
         try:
-            response = gvm_adapter.get_tasks(details=True)
+            response = gvm_client.get_tasks(details=True)
             tasks = response.task
             result = {}
             for task in tasks:
@@ -245,7 +245,7 @@ def register_low_level_tools(
         :rtype: dict[str, Any]
         """
         try:
-            response = gvm_adapter.get_port_lists(details=True)
+            response = gvm_client.get_port_lists(details=True)
             port_lists = response.port_list
             result = {}
             for port_list in port_lists:

@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
-class GvmAdapterConfig(BaseSettings):
+class GvmClientConfig(BaseSettings):
     """Defines the application configuration using Pydantic.
 
     It automatically reads from environment variables or a .env file.
@@ -23,12 +23,12 @@ class GvmAdapterConfig(BaseSettings):
     GMP_PASSWORD: str = "admin"
 
 
-def load_gvm_config() -> GvmAdapterConfig:
+def load_gvm_config() -> GvmClientConfig:
     """Loads, validates, and returns the GVM configuration."""
     try:
-        config = GvmAdapterConfig()
+        config = GvmClientConfig()
         logger.info(
-            f"Gvm Configuration loaded: "
+            f"Gvm Client Configuration loaded: "
             f"GMP_USERNAME={config.GMP_USERNAME}, "
             f"GMP_PASSWORD={'*' * len(config.GMP_PASSWORD)}"  # Mask the password in logs
         )

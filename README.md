@@ -50,7 +50,7 @@ src/
 ├── core/
 │   └── mcp_server.py        # MCP wiring, GVM connection, tool registration
 ├── services/
-│   └── gvm_adapter.py       # Typed wrapper around python-gvm + XML parsing
+│   └── gvm_client.py       # Typed wrapper around python-gvm + XML parsing
 ├── tools/
 │   ├── vuln_scan_tools.py   # High-level scan orchestration tools
 │   └── low_level_tools.py   # Optional low-level tools (LOW_LEVEL_TOOLS=True)

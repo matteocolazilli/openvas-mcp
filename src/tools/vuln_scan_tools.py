@@ -24,7 +24,15 @@ logger = logging.getLogger(__name__)
 
 
 def _default_target_name(hosts: list[str]) -> str:
-    """Generate a default unique name for a target based on its hosts."""
+    """Generate a default target name based on host entries.
+
+    Args:
+        hosts (list[str]): List of host strings (IPs, CIDRs, DNS names, or
+            ranges).
+
+    Returns:
+        str: Target name derived from the provided hosts.
+    """
     if len(hosts) == 1:
         return f"{hosts[0]}"
     if len(hosts) <= 5:
@@ -57,7 +65,15 @@ def _summarize_task_status(task: models.Task) -> dict[str, Any]:
     )
 
 def _remove_none_values(obj: Any) -> Any:
-    """Recursively drop None values from dicts/lists to keep tool output compact."""
+    """Recursively remove ``None`` values from dictionaries and lists.
+
+    Args:
+        obj (Any): Input object to sanitize.
+
+    Returns:
+        Any: Sanitized object with ``None`` values removed from nested
+            containers.
+    """
     if isinstance(obj, dict):
         return {k: _remove_none_values(v) for k, v in obj.items() if v is not None}
     if isinstance(obj, list):
@@ -65,7 +81,15 @@ def _remove_none_values(obj: Any) -> Any:
     return obj
 
 def _xml_datetime_to_iso(value: XmlDateTime | None) -> str | None:
-    """Serialize xsdata XmlDateTime to a stable ISO-8601 string."""
+    """Serialize an ``XmlDateTime`` value to a stable ISO-8601 string.
+
+    Args:
+        value (XmlDateTime | None): XML datetime value to serialize.
+
+    Returns:
+        str | None: ISO-8601 string representation, or ``None`` if the input is
+            ``None``.
+    """
     if value is None:
         return None
     # XmlDateTime is tuple-like; JSON encoding would turn it into a list.
@@ -101,14 +125,18 @@ def _extract_report_datetime(report: models.Report | None, item_type: type[Any] 
     return str(value)
 
 def _decode_report_text_blob(blob: str) -> str:
-    '''
-    Decode a Base64-encoded report text blob.
+    """Decode a report text blob, handling plain text and Base64 payloads.
 
-    :param blob: The Base64-encoded report text blob.
-    :type blob: str
-    :return: The decoded report text.
-    :rtype: str
-    '''
+    Args:
+        blob (str): Report text blob, potentially Base64-encoded.
+
+    Returns:
+        str: Decoded UTF-8 report text.
+
+    Raises:
+        ValueError: If the blob looks like Base64 but has invalid padding or cannot
+            be decoded.
+    """
     stripped = blob.strip()
     if not stripped:
         return ""
@@ -134,14 +162,15 @@ def _decode_report_text_blob(blob: str) -> str:
         raise ValueError("Invalid Base64 string: decoding failed")
 
 def _extract_report_text(report: models.Report) -> str | None:
-    '''
-    Decode the text content from a report object.
+    """Extract and decode the main textual payload from a report.
 
-    :param report: The report object containing the text content.
-    :type report: models.Report
-    :return: The decoded report text, or None if the report contains no text.
-    :rtype: str | None
-    '''
+    Args:
+        report (models.Report): Report object containing mixed content items.
+
+    Returns:
+        str | None: Decoded report text, or ``None`` when no text payload is
+            present.
+    """
     text_chunks = [item for item in report.content if isinstance(item, str) and item.strip()]
     if not text_chunks:
         return None
@@ -149,14 +178,15 @@ def _extract_report_text(report: models.Report) -> str | None:
     return _decode_report_text_blob(blob)
 
 def _summarize_report_metadata(report: models.Report | None) -> dict[str, Any] | None:
-    '''
-    Extract and summarize key metadata from a report object, including owner, task, and report format information.
-    
-    :param report: The report object to summarize.
-    :type report: models.Report | None
-    :return: A dictionary containing the summarized report metadata, or None if the report is None.
-    :rtype: dict[str, Any] | None
-    '''
+    """Build a compact metadata summary for a report.
+
+    Args:
+        report (models.Report | None): Report instance to summarize.
+
+    Returns:
+        dict[str, Any] | None: Metadata dictionary with report, task, owner, and
+            format information, or ``None`` when no report is provided.
+    """
     if report is None:
         return None
 
@@ -221,16 +251,16 @@ def register_vuln_scan_tools(
     mcp: FastMCP,
     gvm_client: GvmClient,
 ) -> None:
-    '''
-    Registers vulnerability scan tools with the FastMCP instance.
+    """Register vulnerability scanning tools on the MCP server.
 
-    :param mcp: The FastMCP instance to register the tools with.
-    :type mcp: FastMCP
-    :param gvm_client: The GvmClient instance to interact with GVM.
-    :type gvm_client: GvmClient
-    :return: None
-    :rtype: None
-    '''
+    Args:
+        mcp (FastMCP): FastMCP server instance where tools are registered.
+        gvm_client (GvmClient): GVM client used by tool handlers to call
+            OpenVAS/GMP APIs.
+
+    Returns:
+        None: This function registers tools as side effects.
+    """
     @mcp.tool(
         name="start_scan",
         title="Start scan",

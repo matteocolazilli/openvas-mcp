@@ -399,7 +399,23 @@ def register_vuln_scan_tools(
 
         return _remove_none_values(summary)
 
+    @mcp.tool(
+        name="stop_scan",
+        title="Stop scan",
+        description="Stop a running scan task.",
+    )
+    async def stop_scan(
+        task_id: Annotated[str, Field(description="The ID of the scan task.")],
+    ) -> dict[str, Any]:
 
+        try:
+            gvm_client.stop_task(task_id=task_id)
+        except RequiredArgument as exc:
+            raise ToolError(f'Missing required argument: {exc.argument}') from exc
+        except GvmError as exc:
+            raise ToolError(f"Failed to stop task: {str(exc)}") from exc
+
+        return {"message": f"Task {task_id} has been stopped."}
 
     @mcp.tool(
         name="fetch_latest_report",
@@ -440,7 +456,7 @@ def register_vuln_scan_tools(
             )
         
         except GvmError as exc:
-            raise ToolError(f"Failed to retrieve task: {str(exc)}") from exc
+            raise ToolError(f"Failed to retrieve report: {str(exc)}") from exc
 
         reports = get_report_response.report if get_report_response else []
         report = next((candidate for candidate in reports if candidate.id == report_id), None)

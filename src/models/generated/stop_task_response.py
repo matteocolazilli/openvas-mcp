@@ -4,19 +4,19 @@ from dataclasses import dataclass, field
 
 
 @dataclass(kw_only=True)
-class Low:
+class StopTaskResponse:
     class Meta:
-        name = "low"
+        name = "stop_task_response"
 
-    full: int = field(
+    status: int = field(
         metadata={
-            "type": "Element",
+            "type": "Attribute",
             "required": True,
         }
     )
-    filtered: int = field(
+    status_text: str = field(
         metadata={
-            "type": "Element",
+            "type": "Attribute",
             "required": True,
         }
     )

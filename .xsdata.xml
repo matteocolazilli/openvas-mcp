@@ -10,7 +10,7 @@
     <WrapperFields>false</WrapperFields>
     <UnnestClasses>false</UnnestClasses>
     <IgnorePatterns>false</IgnorePatterns>
-    <IncludeHeader>true</IncludeHeader>
+    <IncludeHeader>false</IncludeHeader>
   </Output>
   <Conventions>
     <ClassName case="pascalCase" safePrefix="type"/>

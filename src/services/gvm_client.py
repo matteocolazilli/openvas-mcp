@@ -681,3 +681,16 @@ class GvmClient:
             tasks=tasks
         )
         return self._parse(root, models.GetConfigsResponse)
+
+    def stop_task(self, task_id: EntityID) -> models.StopTaskResponse:
+        """
+        Stop a running task.
+
+        Args:
+            task_id (EntityID): Task UUID to stop.
+
+        Returns:
+            models.StopTaskResponse: Task stop response payload.
+        """
+        root = self._call("stop_task", task_id=task_id)
+        return self._parse(root, models.StopTaskResponse)

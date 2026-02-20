@@ -7,6 +7,7 @@ An MCP (Model Context Protocol) server that connects AI clients to Greenbone/Ope
 `openvas-mcp` exposes OpenVAS scanning operations as MCP tools, so an MCP-compatible assistant can:
 - create and launch scans,
 - monitor scan progress,
+- stop scans,
 - fetch reports,
 - compare report deltas between runs.
 
@@ -22,18 +23,19 @@ Contributions are welcome: feel free to open **Issues** and submit **Pull Reques
 
 ## Tooling exposed by the server
 
-### Default (high-level) tools
+### Vulnerability Scan tools
 
 These are always registered:
 - `start_scan`
 - `scan_status`
+- `stop_scan`
 - `fetch_latest_report`
 - `rescan_target`
 - `delta_report`
 
-### Optional low-level tools
+### Low-level tools
 
-These are registered with tag `low_level` and can be enabled/disabled via config:
+These are always registered:
 - `get_targets`
 - `get_target`
 - `create_target`
@@ -45,7 +47,7 @@ These are registered with tag `low_level` and can be enabled/disabled via config
 ```text
 src/
 ├── main.py                  # App entrypoint (stdio MCP server)
-├── config.py                # Env-based settings (GMP_USERNAME, GMP_PASSWORD, LOW_LEVEL_TOOLS, ...)
+├── config.py                # Env-based settings (GMP_USERNAME, GMP_PASSWORD, ...)
 ├── constants.py             # Default UUIDs and report format constants
 ├── core/
 │   └── mcp_server.py        # MCP wiring, GVM connection, tool registration
@@ -53,7 +55,7 @@ src/
 │   └── gvm_client.py       # Typed wrapper around python-gvm + XML parsing
 ├── tools/
 │   ├── vuln_scan_tools.py   # High-level scan orchestration tools
-│   └── low_level_tools.py   # Optional low-level tools (LOW_LEVEL_TOOLS=True)
+│   └── low_level_tools.py   # Low-level GVM wrapper tools
 ├── models/
 │   └── generated/           # Auto-generated dataclasses (xsdata output)
 └── utils/
@@ -118,7 +120,6 @@ The server reads configuration from the following environment variables, which i
 - `GMP_USERNAME`: GMP username (default: `admin`)
 - `GMP_PASSWORD`: GMP password (required: no default, must be set)
 - `LOG_LEVEL`: application log level (default: `INFO`)
-- `LOW_LEVEL_TOOLS`: expose low-level MCP tools (`True`/`False`, default: `False`)
 
 ### 4) Configure the MCP client and run the server
 

@@ -45,22 +45,3 @@ def load_gvm_config() -> GvmClientConfig:
         "*" * pwd_len,
     )
     return config
-
-
-class MCPConfig(BaseSettings):
-    """MCP server configuration."""
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-    LOW_LEVEL_TOOLS: bool = False
-
-
-def load_mcp_config() -> MCPConfig:
-    """Load, validate, and return the MCP server configuration."""
-    config = MCPConfig()
-    logger.info("MCP Configuration loaded: LOW_LEVEL_TOOLS=%s", config.LOW_LEVEL_TOOLS)
-    return config

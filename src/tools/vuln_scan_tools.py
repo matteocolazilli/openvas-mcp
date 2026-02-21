@@ -35,7 +35,7 @@ def _default_target_name(hosts: list[str]) -> str:
     """
     if len(hosts) == 1:
         return f"{hosts[0]}"
-    if len(hosts) <= 5:
+    if len(hosts) <= 3:
         return ", ".join(sorted(hosts))
     return f"{len(hosts)} hosts"
 
@@ -80,22 +80,6 @@ def _remove_none_values(obj: Any) -> Any:
         return [_remove_none_values(v) for v in obj if v is not None]
     return obj
 
-def _xml_datetime_to_iso(value: XmlDateTime | None) -> str | None:
-    """Serialize an ``XmlDateTime`` value to a stable ISO-8601 string.
-
-    Args:
-        value (XmlDateTime | None): XML datetime value to serialize.
-
-    Returns:
-        str | None: ISO-8601 string representation, or ``None`` if the input is
-            ``None``.
-    """
-    if value is None:
-        return None
-    # XmlDateTime is tuple-like; JSON encoding would turn it into a list.
-    # Use string form to keep tool output clean and stable.
-    return str(value)
-
 def _truncate(text: str | None, max_chars: int) -> str | None:
     if text is None:
         return None
@@ -104,6 +88,15 @@ def _truncate(text: str | None, max_chars: int) -> str | None:
     return text[: max_chars - 3] + "..."
 
 def _extract_report_content_item(report: models.Report | None, item_type: type[Any]) -> Any | None:
+    """Extract the first content item of a specified type from a report.
+    
+    Args:
+        report (models.Report | None): Report object containing mixed content items.
+        item_type (type[Any]): The type of content item to extract.
+
+    Returns:
+        Any | None: The first content item of the specified type, or ``None`` if not found or if the report is ``None``.
+    """ 
     if report is None:
         return None
     for item in report.content:
@@ -119,7 +112,7 @@ def _extract_report_datetime(report: models.Report | None, item_type: type[Any] 
         return None
     value = getattr(item, "value", None)
     if isinstance(value, XmlDateTime):
-        return _xml_datetime_to_iso(value)
+        return str(value)
     if value is None:
         return None
     return str(value)
@@ -190,31 +183,30 @@ def _summarize_report_metadata(report: models.Report | None) -> dict[str, Any] |
     if report is None:
         return None
 
-    owner = _extract_report_content_item(report, models.Owner)
-    task = _extract_report_content_item(report, models.Task)
-    report_format = _extract_report_content_item(report, models.ReportFormat)
+    task: models.Task | None = _extract_report_content_item(report, models.Task)
+    creation_time = _extract_report_content_item(report, report.CreationTime)
+    scan_start = str(report.ScanStart)
+    scan_end = str(report.ScanEnd)
 
-    return _remove_none_values(
-        {
+    return {
             "id": report.id,
-            "format_id": report.format_id,
-            "content_type": report.content_type,
-            "extension": report.extension,
-            "owner": owner.name if owner else None,
-            "created_at": _extract_report_datetime(report, getattr(models.Report, "CreationTime", None)),
-            "modified_at": _extract_report_datetime(report, getattr(models.Report, "ModificationTime", None)),
+            "created_at": str(creation_time.value) if creation_time else None,
+            "scan_start": scan_start,
+            "scan_end": scan_end,
             "task": {
-                "id": task.id if task else None,
-                "name": task.name if task else None,
-                },
-            "report_format": {
-                "id": report_format.id if report_format else None,
-                "name": report_format.name if report_format else None,
-            },
+                "id": task.id,
+                "name": task.name,
+                } if task else None,
         }
-    )
 
 def _extract_delta_counts(report_text: str) -> dict[str, int]:
+    """Extract counts of added, removed, and changed issues from a delta report text.
+        
+    Args:
+        report_text (str): The raw text of a delta report.
+    Returns:
+        dict[str, int]: A dictionary with keys "added_issues", "removed_issues", and "changed_issues".
+    """
     return {
         "added_issues": len(utils._ADDED_ISSUE_RE.findall(report_text)),
         "removed_issues": len(utils._REMOVED_ISSUE_RE.findall(report_text)),
@@ -226,24 +218,24 @@ def _build_txt_report_output(
     report_text: str | None,
     *,
     include_full_text: bool,
-    include_delta_summary: bool = False,
     preview_chars: int = 6000,
 ) -> dict[str, Any]:
-    output: dict[str, Any] = {
+
+    if report_text is None:
+        return None
+
+    result: dict[str, Any] = {
         "report": _summarize_report_metadata(report),
-        "report_text_total_chars": len(report_text) if report_text is not None else None,
     }
 
     if report_text is not None:
         if include_full_text:
-            output["report_text"] = report_text
+            result["report_text"] = report_text
         else:
-            output["report_text_preview"] = _truncate(report_text, preview_chars)
+            result["report_text_preview"] = _truncate(report_text, preview_chars)
+            result["report_text_truncated"] = len(report_text) > preview_chars
 
-        if include_delta_summary:
-            output["delta_summary"] = _extract_delta_counts(report_text)
-
-    return _remove_none_values(output)
+    return result
 
 # Main tool registration function
 
@@ -355,11 +347,11 @@ def register_vuln_scan_tools(
         task_id = task_response.id
 
         try:
-            launch_response = gvm_client.start_task(task_id=task_id)
+            start_task_response = gvm_client.start_task(task_id=task_id)
         except GvmError as exc:
             raise ToolError(f"Failed to start task: {str(exc)}") from exc
 
-        report_id = launch_response.report_id
+        report_id = start_task_response.report_id
 
         return {
             "target": {
@@ -429,15 +421,16 @@ def register_vuln_scan_tools(
 
         try:
             get_task_response = gvm_client.get_task(task_id=task_id)
-            tasks = get_task_response.task
-            if not tasks:
-                raise ToolError(f"No task found for task ID {task_id}.")
-            task = tasks[0]
         except RequiredArgument as exc:
             raise ToolError(f'Missing required argument: {exc.argument}') from exc
         except GvmError as exc:
             raise ToolError(f"Failed to retrieve task: {str(exc)}") from exc
         
+        tasks = get_task_response.task
+        if not tasks:
+            raise ToolError(f"No task found for task ID {task_id}.")
+        task = tasks[0]
+
         report_id = None
         if task.last_report and task.last_report.report:
             report_id = task.last_report.report.id
@@ -450,26 +443,22 @@ def register_vuln_scan_tools(
         try:
             get_report_response = gvm_client.get_report(
                 report_id=report_id,
-                # Filters by Critical, High, Medium, and Low severity issues
-                filter_string="levels=chml",
+                filter_string="levels=chml", # Filters by Critical, High, Medium, and Low severity issues 
                 report_format_id=const.DEFAULT_REPORT_FORMAT_ID,
-            )
-        
+            )  
         except GvmError as exc:
             raise ToolError(f"Failed to retrieve report: {str(exc)}") from exc
 
-        reports = get_report_response.report if get_report_response else []
-        report = next((candidate for candidate in reports if candidate.id == report_id), None)
-        if report is None and reports:
-            report = reports[0]
+        report = get_report_response.report[0] if get_report_response.report else None
+
         if not report:
             raise ToolError(f"No reports are available yet for task {task_id}.")
     
-        report_text = _extract_report_text(report)
+        report_csv = _extract_report_text(report)
 
         output = _build_txt_report_output(
             report,
-            report_text,
+            report_csv,
             include_full_text=include_details,
         )
 
@@ -577,16 +566,14 @@ def register_vuln_scan_tools(
             raise ToolError(f"Delta report is empty for task ID {task_id}.")
 
         report_text = _extract_report_text(report)
-        output = _build_txt_report_output(
+        result = _build_txt_report_output(
             report,
-            report_text,
-            include_full_text=True,
-            include_delta_summary=True,
+            report_text
         )
         
-        output["comparison"] = {
+        result["comparison"] = {
             "base_report_id": last_report_id,
             "delta_report_id": previous_report_id,
         }
 
-        return _remove_none_values(output)
+        return _remove_none_values(result)

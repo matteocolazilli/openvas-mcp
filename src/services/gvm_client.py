@@ -269,7 +269,7 @@ class GvmClient:
         Returns:
             T: Parsed model instance.
         """
-        return self._xml_parser.from_string(self._xml_text(root), cls)
+        return self._xml_parser.parse(root, clazz=cls)
 
     def get_targets(
         self,

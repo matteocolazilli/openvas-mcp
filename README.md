@@ -56,9 +56,11 @@ src/
 ├── services/
 │   └── gvm_client.py           # Typed wrapper around python-gvm + XML parsing
 ├── tools/
-│   ├── scan_workflow_tools.py    # High-level scan orchestration tools
-│   ├── _scan_workflow_helpers.py  # Internal parsing/formatting helpers for workflow tools
-│   └── inspection_control_tools.py # Inspection/control tools for existing scan state
+│   ├── scan_workflow_tools.py      # High-level scan orchestration tools
+│   ├── inspection_control_tools.py # Inspection/control tools for existing scan state
+│   └── utils/
+│       ├── constants.py            # Tool-scoped constants (scanner/config/port list IDs, formats)
+│       └── helpers.py              # Internal parsing/formatting helpers for tool outputs
 └── models/
     └── generated/             # Auto-generated dataclasses (xsdata output)
 
@@ -151,7 +153,7 @@ Community contributions are welcome and encouraged.
 
 To keep tool modules maintainable:
 - keep MCP tool handlers in `src/tools/*_tools.py`
-- keep non-tool helper functions (parsing, formatting, output shaping) in internal helper modules such as `src/tools/_scan_workflow_helpers.py`
+- keep non-tool helper functions (parsing, formatting, output shaping) under `src/tools/utils/` (for example `src/tools/utils/helpers.py`)
 - use `src/services/gvm_client.py` for GMP interaction primitives and keep orchestration logic in tool handlers
 
 ### Developing New Tools

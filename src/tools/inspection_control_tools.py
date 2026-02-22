@@ -33,7 +33,6 @@ def register_inspection_control_tools(
         name="get_targets",
         title="Get all targets",
         description="Retrieve a list of all configured scan targets.",
-        tags=["inspection_control"],
     )
     async def get_targets() -> dict[str, Any]:
 
@@ -62,7 +61,6 @@ def register_inspection_control_tools(
         name="get_target",
         title="Get a specific target",
         description="Retrieve a specific configured scan target.",
-        tags=["inspection_control"],
     )
     async def get_target(
         target_id: Annotated[
@@ -95,7 +93,6 @@ def register_inspection_control_tools(
         name="get_tasks",
         title="Get currently existing tasks",
         description="Retrieve the list of currently existing tasks in GVM",
-        tags=["inspection_control"],
     )
     async def get_tasks() -> dict[str, Any]:
 
@@ -126,7 +123,6 @@ def register_inspection_control_tools(
         name="get_port_lists",
         title="Get all port lists",
         description="Retrieve a list of all configured port lists.",
-        tags=["inspection_control"],
     )
     async def get_port_lists() -> dict[str, Any]:
 

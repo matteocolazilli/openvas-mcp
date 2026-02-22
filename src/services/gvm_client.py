@@ -23,14 +23,14 @@ from typing import (
     Any,
     Iterable,
     Optional,
-    TypeVar, 
+    TypeVar,
     Union,
     Sequence,
     Mapping,
     Generator,
     get_args,
     get_origin,
-    get_type_hints
+    get_type_hints,
 )
 
 from gvm.protocols.gmp.requests.v227 import AliveTest
@@ -134,7 +134,9 @@ class GvmClient:
             )
 
         resolved = GvmClient._resolved_type_hints(clazz)
-        field_types = {f.name: resolved.get(f.name, f.type) for f in dataclasses.fields(clazz)}
+        field_types = {
+            f.name: resolved.get(f.name, f.type) for f in dataclasses.fields(clazz)
+        }
 
         cleaned: dict[str, Any] = {}
         for key, value in params.items():
@@ -148,7 +150,10 @@ class GvmClient:
                 continue
             if f.name in cleaned:
                 continue
-            required = f.default is MISSING and getattr(f, "default_factory", MISSING) is MISSING
+            required = (
+                f.default is MISSING
+                and getattr(f, "default_factory", MISSING) is MISSING
+            )
             if required:
                 cleaned[f.name] = None
 
@@ -165,9 +170,7 @@ class GvmClient:
         Yields:
             Generator[Gmp, None, None]: Active GMP session.
         """
-        with Gmp(
-            connection=self._connection, transform=self._transform
-        ) as gmp:
+        with Gmp(connection=self._connection, transform=self._transform) as gmp:
             if authenticate and self._username and self._password:
                 gmp.authenticate(self._username, self._password)
             yield gmp
@@ -194,7 +197,7 @@ class GvmClient:
             if arg in sig.parameters.keys():
                 return True
         return False
-    
+
     def _add_rows_to_filter_string(self, command: Any, kwargs: dict[str, Any]) -> None:
         """
         Add `rows=-1` to `filter_string` when supported and not already specified.
@@ -212,7 +215,9 @@ class GvmClient:
             if filter_string and re.search(r"(?:^|\\s)rows\\s*=", filter_string):
                 return
 
-            kwargs["filter_string"] = f"{filter_string} rows=-1".strip() if filter_string else "rows=-1"
+            kwargs["filter_string"] = (
+                f"{filter_string} rows=-1".strip() if filter_string else "rows=-1"
+            )
 
     def _call(
         self, method_name: str, *, authenticate: bool = True, **kwargs: Any
@@ -236,7 +241,7 @@ class GvmClient:
                 command = getattr(gmp, method_name, None)
                 if command is None:
                     raise GvmError(f"Unknown GMP method: {method_name}")
-                
+
                 # This is needed to avoid pagination and get all results.
                 self._add_rows_to_filter_string(command, kwargs)
 
@@ -415,7 +420,7 @@ class GvmClient:
         reverse_lookup_unify: Optional[bool] = None,
         port_range: Optional[str] = None,
         port_list_id: Optional[EntityID] = None,
-        ) -> models.CreateTargetResponse:
+    ) -> models.CreateTargetResponse:
         """
         Create a new target.
 
@@ -650,7 +655,7 @@ class GvmClient:
         details: Optional[bool] = None,
         families: Optional[bool] = None,
         preferences: Optional[bool] = None,
-        tasks: Optional[bool] = None
+        tasks: Optional[bool] = None,
     ) -> models.GetConfigsResponse:
         """
         Request a list of scan configs.
@@ -678,7 +683,7 @@ class GvmClient:
             details=details,
             families=families,
             preferences=preferences,
-            tasks=tasks
+            tasks=tasks,
         )
         return self._parse(root, models.GetConfigsResponse)
 

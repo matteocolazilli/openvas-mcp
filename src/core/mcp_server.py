@@ -6,9 +6,9 @@ import logging
 from fastmcp.server import FastMCP
 from pydantic import ValidationError
 
-from src.config import load_gvm_config
+from src.config.gvm_client_config import load_gvm_config
 from src.services.gvm_client import GvmClient
-from src.tools.gvm_primitive_tools import register_gvm_primitive_tools
+from src.tools.inspection_control_tools import register_inspection_control_tools
 from src.tools.scan_workflow_tools import register_scan_workflow_tools
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class GreenboneMCP(FastMCP):
             password=gvm_config.GMP_PASSWORD.get_secret_value(),
         )
 
-        register_gvm_primitive_tools(self, self.gvm_client)
+        register_inspection_control_tools(self, self.gvm_client)
         register_scan_workflow_tools(self, self.gvm_client)
 
     @property

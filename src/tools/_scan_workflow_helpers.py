@@ -19,6 +19,7 @@ _ADDED_ISSUE_RE = re.compile(r"(?m)^\+\s+Added Issue\s*$")
 _REMOVED_ISSUE_RE = re.compile(r"(?m)^-\s+Removed Issue\s*$")
 _CHANGED_ISSUE_RE = re.compile(r"(?im)^(?:\*|~)\s+Changed Issue\s*$")
 
+
 def _default_target_name(hosts: list[str]) -> str:
     """Generate a default target name from a list of hosts.
 
@@ -212,7 +213,9 @@ def _extract_report_text(report: models.Report) -> str | None:
         str | None: The decoded textual payload, or ``None`` if no text payload
         is present.
     """
-    text_chunks = [item for item in report.content if isinstance(item, str) and item.strip()]
+    text_chunks = [
+        item for item in report.content if isinstance(item, str) and item.strip()
+    ]
     if not text_chunks:
         return None
     blob = max(text_chunks, key=lambda value: len(value.strip()))
@@ -245,7 +248,9 @@ def _summarize_report_metadata(report: models.Report | None) -> dict[str, Any] |
         "task": {
             "id": task.id,
             "name": task.name,
-        } if task else None,
+        }
+        if task
+        else None,
     }
 
 

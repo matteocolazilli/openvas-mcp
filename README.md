@@ -32,15 +32,15 @@ These are always registered:
 - `rescan_target`
 - `delta_report`
 
-### GVM primitive tools
+### Inspection / control tools
 
 These are always registered:
 - `get_targets`
 - `get_target`
-- `create_target`
 - `get_tasks`
 - `get_port_lists`
-- `stop_scan`
+- `start_task`
+- `stop_task`
 
 ## Project Structure
 
@@ -58,7 +58,7 @@ src/
 ├── tools/
 │   ├── scan_workflow_tools.py    # High-level scan orchestration tools
 │   ├── _scan_workflow_helpers.py  # Internal parsing/formatting helpers for workflow tools
-│   └── gvm_primitive_tools.py     # Primitive GVM wrapper tools
+│   └── inspection_control_tools.py # Inspection/control tools for existing scan state
 └── models/
     └── generated/             # Auto-generated dataclasses (xsdata output)
 

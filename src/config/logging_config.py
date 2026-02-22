@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Matteo Colazilli
 
 import logging
-import os
+import sys
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,9 +32,7 @@ def load_logging_config() -> LoggingConfig:
     """Loads, validates, and returns the Logging configuration."""
     try:
         config = LoggingConfig()
-        logger.info(
-            f"Logging Configuration loaded: log_level={config.LOG_LEVEL}, "
-        )
+        logger.info(f"Logging Configuration loaded: log_level={config.LOG_LEVEL} ")
         return config
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
@@ -52,18 +50,13 @@ def setup_logging(
 
     resolved_level = level or logging_config.LOG_LEVEL
     if isinstance(resolved_level, str):
-        resolved_level = logging._nameToLevel.get(
-            resolved_level.upper(), logging.INFO
-        )
+        resolved_level = logging._nameToLevel.get(resolved_level.upper(), logging.INFO)
 
     root_logger = logging.getLogger()
-    if root_logger.handlers:
-        root_logger.setLevel(resolved_level)
-        return
 
     formatter = logging.Formatter(_DEFAULT_FORMAT, datefmt=_DEFAULT_DATEFMT)
     handlers: list[logging.Handler] = [
-        logging.StreamHandler(stream=os.sys.stderr),
+        logging.StreamHandler(stream=sys.stderr),
     ]
     for handler in handlers:
         handler.setFormatter(formatter)

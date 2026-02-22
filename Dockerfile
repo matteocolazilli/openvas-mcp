@@ -4,10 +4,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 RUN addgroup --gid 1001 mcp && \
     useradd -g 1001 -u 1001 mcp && \
-    mkdir -p /openvas-mcp/ && \
-    chown -R mcp:mcp /openvas-mcp
+    mkdir -p /greenbone-mcp/ && \
+    chown -R mcp:mcp /greenbone-mcp
 
-WORKDIR /openvas-mcp
+WORKDIR /greenbone-mcp
 
 COPY --chown=mcp:mcp ./pyproject.toml ./uv.lock ./
 

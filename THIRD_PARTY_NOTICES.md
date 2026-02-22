@@ -7,7 +7,7 @@ It does **not** replace the original license texts of upstream projects.
 
 ## Project License
 
-`openvas-mcp` is licensed under:
+`GreenboneMCP` is licensed under:
 
 - **GPL-3.0-or-later**
 

@@ -1,245 +1,28 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Matteo Colazilli
 
-"""Tool handlers for vulnerability scanning.
-"""
-import base64 as b64
-import logging
-import re
+"""Tool handlers for vulnerability scanning."""
 from typing import Annotated, Any, Optional
 
 from fastmcp.exceptions import ToolError
 from fastmcp.server import FastMCP
 from gvm.errors import GvmError, RequiredArgument
 from pydantic import Field
-from xsdata.models.datatype import XmlDateTime
 
-import src.models.generated as models
 import src.constants as const
-import src.utils.utilities as utils
 from src.services.gvm_client import GvmClient
-
-
-logger = logging.getLogger(__name__)
-
-
-def _default_target_name(hosts: list[str]) -> str:
-    """Generate a default target name based on host entries.
-
-    Args:
-        hosts (list[str]): List of host strings (IPs, CIDRs, DNS names, or
-            ranges).
-
-    Returns:
-        str: Target name derived from the provided hosts.
-    """
-    if len(hosts) == 1:
-        return f"{hosts[0]}"
-    if len(hosts) <= 3:
-        return ", ".join(sorted(hosts))
-    return f"{len(hosts)} hosts"
-
-def _summarize_task_status(task: models.Task) -> dict[str, Any]:
-    target = task.target
-    target_summary = None
-    if target is not None:
-        target_summary = {
-            "id": target.id,
-            "name": target.name,
-            "hosts": target.hosts,
-        }
-
-    task_summary = {
-        "id": task.id,
-        "name": task.name,
-        "status": task.status,
-        "progress": task.progress,
-        "result_count": task.result_count,
-    }
-
-    return _remove_none_values(
-        {
-            "task": task_summary,
-            "target": target_summary,
-        }
-    )
-
-def _remove_none_values(obj: Any) -> Any:
-    """Recursively remove ``None`` values from dictionaries and lists.
-
-    Args:
-        obj (Any): Input object to sanitize.
-
-    Returns:
-        Any: Sanitized object with ``None`` values removed from nested
-            containers.
-    """
-    if isinstance(obj, dict):
-        return {k: _remove_none_values(v) for k, v in obj.items() if v is not None}
-    if isinstance(obj, list):
-        return [_remove_none_values(v) for v in obj if v is not None]
-    return obj
-
-def _truncate(text: str | None, max_chars: int) -> str | None:
-    if text is None:
-        return None
-    if max_chars <= 0 or len(text) <= max_chars:
-        return text
-    return text[: max_chars - 3] + "..."
-
-def _extract_report_content_item(report: models.Report | None, item_type: type[Any]) -> Any | None:
-    """Extract the first content item of a specified type from a report.
-    
-    Args:
-        report (models.Report | None): Report object containing mixed content items.
-        item_type (type[Any]): The type of content item to extract.
-
-    Returns:
-        Any | None: The first content item of the specified type, or ``None`` if not found or if the report is ``None``.
-    """ 
-    if report is None:
-        return None
-    for item in report.content:
-        if isinstance(item, item_type):
-            return item
-    return None
-
-def _extract_report_datetime(report: models.Report | None, item_type: type[Any] | None) -> str | None:
-    if item_type is None:
-        return None
-    item = _extract_report_content_item(report, item_type)
-    if item is None:
-        return None
-    value = getattr(item, "value", None)
-    if isinstance(value, XmlDateTime):
-        return str(value)
-    if value is None:
-        return None
-    return str(value)
-
-def _decode_report_text_blob(blob: str) -> str:
-    """Decode a report text blob, handling plain text and Base64 payloads.
-
-    Args:
-        blob (str): Report text blob, potentially Base64-encoded.
-
-    Returns:
-        str: Decoded UTF-8 report text.
-
-    Raises:
-        ValueError: If the blob looks like Base64 but has invalid padding or cannot
-            be decoded.
-    """
-    stripped = blob.strip()
-    if not stripped:
-        return ""
-
-    if not utils._BASE64_CHARS_RE.fullmatch(stripped):
-        return stripped
-    
-    normalized = re.sub(r"\s+", "", stripped)
-    if not normalized:
-        return ""
-
-    remainder = len(normalized) % 4
-
-    if remainder == 1:
-        raise ValueError("Invalid Base64 string: incorrect padding")
-    if remainder:
-        normalized += "=" * (4 - remainder)
-
-    try:
-        decoded = b64.b64decode(normalized, validate=False)
-        return decoded.decode("utf-8", errors="replace")
-    except Exception:
-        raise ValueError("Invalid Base64 string: decoding failed")
-
-def _extract_report_text(report: models.Report) -> str | None:
-    """Extract and decode the main textual payload from a report.
-
-    Args:
-        report (models.Report): Report object containing mixed content items.
-
-    Returns:
-        str | None: Decoded report text, or ``None`` when no text payload is
-            present.
-    """
-    text_chunks = [item for item in report.content if isinstance(item, str) and item.strip()]
-    if not text_chunks:
-        return None
-    blob = max(text_chunks, key=lambda value: len(value.strip()))
-    return _decode_report_text_blob(blob)
-
-def _summarize_report_metadata(report: models.Report | None) -> dict[str, Any] | None:
-    """Build a compact metadata summary for a report.
-
-    Args:
-        report (models.Report | None): Report instance to summarize.
-
-    Returns:
-        dict[str, Any] | None: Metadata dictionary with report, task, owner, and
-            format information, or ``None`` when no report is provided.
-    """
-    if report is None:
-        return None
-
-    task: models.Task | None = _extract_report_content_item(report, models.Task)
-    creation_time = _extract_report_content_item(report, report.CreationTime)
-    scan_start = str(report.ScanStart)
-    scan_end = str(report.ScanEnd)
-
-    return {
-            "id": report.id,
-            "created_at": str(creation_time.value) if creation_time else None,
-            "scan_start": scan_start,
-            "scan_end": scan_end,
-            "task": {
-                "id": task.id,
-                "name": task.name,
-                } if task else None,
-        }
-
-def _extract_delta_counts(report_text: str) -> dict[str, int]:
-    """Extract counts of added, removed, and changed issues from a delta report text.
-        
-    Args:
-        report_text (str): The raw text of a delta report.
-    Returns:
-        dict[str, int]: A dictionary with keys "added_issues", "removed_issues", and "changed_issues".
-    """
-    return {
-        "added_issues": len(utils._ADDED_ISSUE_RE.findall(report_text)),
-        "removed_issues": len(utils._REMOVED_ISSUE_RE.findall(report_text)),
-        "changed_issues": len(utils._CHANGED_ISSUE_RE.findall(report_text)),
-    }
-
-def _build_txt_report_output(
-    report: models.Report,
-    report_text: str | None,
-    *,
-    include_full_text: bool,
-    preview_chars: int = 6000,
-) -> dict[str, Any]:
-
-    if report_text is None:
-        return None
-
-    result: dict[str, Any] = {
-        "report": _summarize_report_metadata(report),
-    }
-
-    if report_text is not None:
-        if include_full_text:
-            result["report_text"] = report_text
-        else:
-            result["report_text_preview"] = _truncate(report_text, preview_chars)
-            result["report_text_truncated"] = len(report_text) > preview_chars
-
-    return result
+from src.tools._scan_workflow_helpers import (
+    _build_txt_report_output,
+    _default_target_name,
+    _extract_delta_counts,
+    _extract_report_text,
+    _remove_none_values,
+    _summarize_task_status,
+)
 
 # Main tool registration function
 
-def register_vuln_scan_tools(
+def register_scan_workflow_tools(
     mcp: FastMCP,
     gvm_client: GvmClient,
 ) -> None:
@@ -331,7 +114,7 @@ def register_vuln_scan_tools(
         except GvmError as exc:
             raise ToolError(f"Failed to create target: {str(exc)}") from exc
         
-        task_name = f"Scan {target_name} - OpenVAS MCP"
+        task_name = f"Scan {target_name} - Greenbone MCP"
         target_id = target_response.id
         
         try:
@@ -390,24 +173,6 @@ def register_vuln_scan_tools(
         summary = _summarize_task_status(task)
 
         return _remove_none_values(summary)
-
-    @mcp.tool(
-        name="stop_scan",
-        title="Stop scan",
-        description="Stop a running scan task.",
-    )
-    async def stop_scan(
-        task_id: Annotated[str, Field(description="The ID of the scan task.")],
-    ) -> dict[str, Any]:
-
-        try:
-            gvm_client.stop_task(task_id=task_id)
-        except RequiredArgument as exc:
-            raise ToolError(f'Missing required argument: {exc.argument}') from exc
-        except GvmError as exc:
-            raise ToolError(f"Failed to stop task: {str(exc)}") from exc
-
-        return {"message": f"Task {task_id} has been stopped."}
 
     @mcp.tool(
         name="fetch_latest_report",
@@ -528,6 +293,7 @@ def register_vuln_scan_tools(
     )
     async def delta_report(
         task_id: Annotated[str, Field(description="The ID of the task for which to generate the delta report.")],
+        full_details: Annotated[bool, Field(description="Whether to include full details of the delta report.")] = False,
     ) -> dict[str, Any]:
     
         try:
@@ -566,14 +332,14 @@ def register_vuln_scan_tools(
             raise ToolError(f"Delta report is empty for task ID {task_id}.")
 
         report_text = _extract_report_text(report)
-        result = _build_txt_report_output(
-            report,
-            report_text
-        )
+        result = {}
         
-        result["comparison"] = {
+        result["delta_summary"] = {
             "base_report_id": last_report_id,
             "delta_report_id": previous_report_id,
+            "counts": _extract_delta_counts(report_text) if report_text else {}
         }
+        if full_details:
+            result["detailed_delta_report"] = _build_txt_report_output(report, report_text)
 
         return _remove_none_values(result)

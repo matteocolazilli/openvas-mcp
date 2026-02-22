@@ -8,8 +8,8 @@ from pydantic import ValidationError
 
 from src.config import load_gvm_config
 from src.services.gvm_client import GvmClient
-from src.tools.vuln_scan_tools import register_vuln_scan_tools
-from src.tools.low_level_tools import register_low_level_tools
+from src.tools.gvm_primitive_tools import register_gvm_primitive_tools
+from src.tools.scan_workflow_tools import register_scan_workflow_tools
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def _format_gvm_config_error(ex: ValidationError) -> str:
     return "Failed to load GVM configuration: invalid settings."
 
 
-class OpenVASMCP(FastMCP):
+class GreenboneMCP(FastMCP):
     """
     MCP server for Greenbone/OpenVAS integration.
     """
@@ -50,8 +50,8 @@ class OpenVASMCP(FastMCP):
             password=gvm_config.GMP_PASSWORD.get_secret_value(),
         )
 
-        register_low_level_tools(self, self.gvm_client)
-        register_vuln_scan_tools(self, self.gvm_client)
+        register_gvm_primitive_tools(self, self.gvm_client)
+        register_scan_workflow_tools(self, self.gvm_client)
 
     @property
     def gvm(self) -> GvmClient:

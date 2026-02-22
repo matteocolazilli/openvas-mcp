@@ -239,7 +239,7 @@ class GvmClient:
                 
                 # This is needed to avoid pagination and get all results.
                 self._add_rows_to_filter_string(command, kwargs)
-                logger.debug("Calling GMP method %s with args: %s", method_name, kwargs)
+
                 result: etree.Element = command(**kwargs)
                 return result
         except GvmError:

@@ -9,39 +9,35 @@ from fastmcp.server import FastMCP
 from gvm.errors import GvmError, RequiredArgument
 from pydantic import Field
 
+from src.models.generated import task
 from src.services.gvm_client import GvmClient
 import src.constants as const
 
 
 logger = logging.getLogger(__name__)
 
-def register_low_level_tools(
+def register_gvm_primitive_tools(
         mcp: FastMCP, 
         gvm_client: GvmClient,
     ) -> None:
     """
-    Registers low-level tools with the FastMCP instance.
-
-    :param mcp: The FastMCP instance to register the tools with.
-    :type mcp: FastMCP
-    :param gvm_client: The GvmClient instance to interact with GVM.
-    :type gvm_client: GvmClient
-    :return: None
-    :rtype: None
+    Registers primitive GVM tools with the FastMCP instance.
+    
+    Args:
+        mcp (FastMCP): The FastMCP instance to register the tools with.   
+        gvm_client (GvmClient): The GvmClient instance to interact with GVM.    
+        
+    Returns:
+        None: This function does not return anything. It registers tools with the FastMCP instance.
     """
     @mcp.tool(
         name="get_targets",
         title="Get all targets",
         description="Retrieve a list of all configured scan targets.",
-        tags=["low_level"]
+        tags=["gvm_primitive"]
     )
     async def get_targets() -> dict[str, Any]:
-        """
-        Retrieve a list of all configured scan targets.
 
-        :return: A dictionary containing the scan targets.
-        :rtype: dict[str, Any]
-        """
         try:
             response = gvm_client.get_targets()
         except Exception as exc:
@@ -66,7 +62,7 @@ def register_low_level_tools(
         name="get_target",
         title="Get a specific target",
         description="Retrieve a specific configured scan target.",
-        tags=["low_level"]
+        tags=["gvm_primitive"]
     )
     async def get_target(
         target_id: Annotated[str,
@@ -75,14 +71,7 @@ def register_low_level_tools(
             ),
         ],
     ) -> dict[str, Any]:
-        """
-        Retrieve a specific configured scan target.
-        
-        :param target_id: The UUID of the target to be retrieved.
-        :type target_id: Annotated[str, Field(description="The UUID of the target to be retrieved.")]
-        :return: A dictionary containing the specified scan target.
-        :rtype: dict[str, Any]
-        """
+
         try:
             response = gvm_client.get_target(target_id=target_id)
             target = response.target[0]
@@ -103,7 +92,7 @@ def register_low_level_tools(
         name="create_target",
         title="Create a new target",
         description="Create a new scan target with specified hosts and optional port list.",
-        tags=["low_level"]
+        tags=["gvm_primitive"]
     )
     async def create_target(
         name: Annotated[
@@ -157,20 +146,7 @@ def register_low_level_tools(
             ),
         ],
     ) -> dict[str, Any]:   
-        """
-        Docstring for create_target
-        
-        :param name: A name for the new target.
-        :type name: str
-        :param hosts: List of target hosts (IP addresses, CIDRs, or DNS names). Accepted formats: single IPs (e.g. '10.10.11.1'), CIDR ranges (e.g. '192.168.1.1/24'), FQDNs (e.g. 'example.com'), IP ranges (e.g. '192.168.1.1-10', '192.168.1.1-192.168.1.255').
-        :type hosts: list[str]
-        :param port_range_list: List of comma-separated port range specifications. Accepted formats: single port (e.g. '7'), port range (e.g. '9-11'). These options can be mixed (e.g. '5', '7', '9-11', '13'). An entry can be preceded by a protocol specifier ('T:' for TCP, 'U:' for UDP) (e.g. 'T:1-3', 'U:7'). If no specifier is given, TCP is assumed. If not provided, the default 'All IANA assigned TCP ports' port list is used.
-        :type port_range_list: Optional[str]
-        :param port_list_id: Optional ID of an existing port list to use for the target. If provided, this will override any port_ranges_list specification. If not provided, the default 'All IANA assigned TCP ports' port list is used.
-        :type port_list_id: Optional[str]
-        :return: A dictionary containing the created scan target.
-        :rtype: dict[str, Any]
-        """
+
         try:
             if port_list_id:
                 response = gvm_client.create_target(name=name, hosts=hosts, port_list_id=port_list_id)
@@ -201,15 +177,10 @@ def register_low_level_tools(
         name="get_tasks",
         title="Get currently existing tasks",
         description="Retrieve the list of currently existing tasks in GVM",
-        tags=["low_level"]
+        tags=["gvm_primitive"]
     )
     async def get_tasks() -> dict[str, Any]:
-        """
-        Retrieve the list of currently existing tasks.
-        
-        :return: A dictionary containing the currently existing tasks.
-        :rtype: dict[str, Any]
-        """
+
         try:
             response = gvm_client.get_tasks(details=True)
             tasks = response.task
@@ -235,15 +206,10 @@ def register_low_level_tools(
         name="get_port_lists",
         title="Get all port lists",
         description="Retrieve a list of all configured port lists.",
-        tags=["low_level"]
+        tags=["gvm_primitive"]
     )
     async def get_port_lists() -> dict[str, Any]:
-        """
-        Retrieve a list of all configured port lists.
-        
-        :return: A dictionary containing all configured port lists.
-        :rtype: dict[str, Any]
-        """
+
         try:
             response = gvm_client.get_port_lists(details=True)
             port_lists = response.port_list
@@ -256,3 +222,23 @@ def register_low_level_tools(
             return {"port_lists": result}
         except GvmError as exc:
             raise ToolError(str(exc)) from exc
+        
+    @mcp.tool(
+        name="stop_scan",
+        title="Stop scan",
+        description="Stop a running scan task.",
+    )
+    async def stop_scan(
+        task_id: Annotated[str, Field(description="The ID of the scan task.")],
+    ) -> dict[str, Any]:
+
+        try:
+            gvm_client.stop_task(task_id=task_id)
+        except RequiredArgument as exc:
+            raise ToolError(f'Missing required argument: {exc.argument}') from exc
+        except GvmError as exc:
+            raise ToolError(f"Failed to stop task: {str(exc)}") from exc  
+
+        return {
+            "message": f"Task with ID {task_id} stopped successfully.",
+        }

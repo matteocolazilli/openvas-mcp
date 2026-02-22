@@ -1,10 +1,10 @@
-# openvas-mcp
+# GreenboneMCP
 
 An MCP (Model Context Protocol) server that connects AI clients to Greenbone/OpenVAS through GMP (`python-gvm`).
 
 ## What this project is
 
-`openvas-mcp` exposes OpenVAS scanning operations as MCP tools, so an MCP-compatible assistant can:
+`GreenboneMCP` exposes MCP tools for scan/report workflows in Greenbone/OpenVAS, so an assistant can:
 - create and launch scans,
 - monitor scan progress,
 - stop scans,
@@ -23,17 +23,16 @@ Contributions are welcome: feel free to open **Issues** and submit **Pull Reques
 
 ## Tooling exposed by the server
 
-### Vulnerability Scan tools
+### Scan workflow tools
 
 These are always registered:
 - `start_scan`
 - `scan_status`
-- `stop_scan`
 - `fetch_latest_report`
 - `rescan_target`
 - `delta_report`
 
-### Low-level tools
+### GVM primitive tools
 
 These are always registered:
 - `get_targets`
@@ -41,6 +40,7 @@ These are always registered:
 - `create_target`
 - `get_tasks`
 - `get_port_lists`
+- `stop_scan`
 
 ## Project Structure
 
@@ -54,8 +54,9 @@ src/
 ├── services/
 │   └── gvm_client.py       # Typed wrapper around python-gvm + XML parsing
 ├── tools/
-│   ├── vuln_scan_tools.py   # High-level scan orchestration tools
-│   └── low_level_tools.py   # Low-level GVM wrapper tools
+│   ├── scan_workflow_tools.py  # High-level scan orchestration tools
+│   ├── _scan_workflow_helpers.py # Internal parsing/formatting helpers for workflow tools
+│   └── gvm_primitive_tools.py  # Primitive GVM wrapper tools
 ├── models/
 │   └── generated/           # Auto-generated dataclasses (xsdata output)
 └── utils/
@@ -95,14 +96,14 @@ In this project the same named volume is used to access the `gvmd` socket from t
 ### 1) Clone this repository
 
 ```bash
-git clone https://github.com/matteocolazilli/openvas-mcp.git
-cd openvas-mcp
+git clone https://github.com/matteocolazilli/GreenboneMCP.git
+cd GreenboneMCP
 ```
 
 ### 2) Build this MCP image
 
 ```bash
-docker build -t openvas-mcp:latest .
+docker build -t greenbonemcp:latest .
 ```
 
 ### 3) Create `.env` configuration and set configuration values
@@ -123,15 +124,15 @@ The server reads configuration from the following environment variables, which i
 
 ### 4) Configure the MCP client and run the server
 
-Configure your MCP client/agent, according to its documentation, to run the OpenVAS MCP server with the following `docker run` command:
+Configure your MCP client/agent, according to its documentation, to run the GreenboneMCP server with the following `docker run` command:
 
 ```bash
 docker run 
   --rm -i 
   --env-file <path-to-your-env-file> 
-  --name openvas-mcp 
+  --name greenbonemcp 
   --volume greenbone-community-edition_gvmd_socket_vol:/run/gvmd 
-  openvas-mcp:latest 
+  greenbonemcp:latest 
 ```
 
 **Note**: the `--env-file` path must point to the `.env` you created in step 3.
@@ -146,6 +147,13 @@ Use your MCP-compatible assistant to interact with OpenVAS through the tools exp
 - Open a Pull Request with focused changes and a clear description.
 
 Community contributions are welcome and encouraged.
+
+### Tool Module Conventions
+
+To keep tool modules maintainable:
+- keep MCP tool handlers in `src/tools/*_tools.py`
+- keep non-tool helper functions (parsing, formatting, output shaping) in internal helper modules such as `src/tools/_scan_workflow_helpers.py`
+- use `src/services/gvm_client.py` for GMP interaction primitives and keep orchestration logic in tool handlers
 
 ### Developing New Tools
 

@@ -1,7 +1,7 @@
 [project]
-name = "openvas-mcp"
+name = "GreenboneMCP"
 version = "0.1.0"
-description = "MCP server for Greenbone OpenVAS"
+description = "MCP server for Greenbone/OpenVAS"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

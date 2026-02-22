@@ -46,22 +46,21 @@ These are always registered:
 
 ```text
 src/
-├── main.py                  # App entrypoint (stdio MCP server)
-├── config.py                # Env-based settings (GMP_USERNAME, GMP_PASSWORD, ...)
-├── constants.py             # Default UUIDs and report format constants
+├── main.py                     # App entrypoint (stdio MCP server)
+├── constants.py                # Default UUIDs and report format constants
+├── config/
+│   ├── gvm_client_config.py    # Env-based GVM client settings (GMP_USERNAME, GMP_PASSWORD, ...)
+│   └── logging_config.py       # Logging configuration settings
 ├── core/
-│   └── mcp_server.py        # MCP wiring, GVM connection, tool registration
+│   └── mcp_server.py           # MCP wiring, GVM connection, tool registration
 ├── services/
-│   └── gvm_client.py       # Typed wrapper around python-gvm + XML parsing
+│   └── gvm_client.py           # Typed wrapper around python-gvm + XML parsing
 ├── tools/
-│   ├── scan_workflow_tools.py  # High-level scan orchestration tools
-│   ├── _scan_workflow_helpers.py # Internal parsing/formatting helpers for workflow tools
-│   └── gvm_primitive_tools.py  # Primitive GVM wrapper tools
-├── models/
-│   └── generated/           # Auto-generated dataclasses (xsdata output)
-└── utils/
-    ├── logging_config.py    # Logging setup and helper functions
-    └── utilities.py         # Misc utilities (Regex, Sanitization, ...)
+│   ├── scan_workflow_tools.py    # High-level scan orchestration tools
+│   ├── _scan_workflow_helpers.py  # Internal parsing/formatting helpers for workflow tools
+│   └── gvm_primitive_tools.py     # Primitive GVM wrapper tools
+└── models/
+    └── generated/             # Auto-generated dataclasses (xsdata output)
 
 ```
 

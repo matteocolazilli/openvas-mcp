@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Matteo Colazilli
 
 from src.core.mcp_server import GreenboneMCP
-from src.utils.logging_config import setup_logging
+from src.config.logging_config import setup_logging
 
 
 def main():

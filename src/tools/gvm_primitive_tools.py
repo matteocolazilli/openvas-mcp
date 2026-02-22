@@ -9,7 +9,6 @@ from fastmcp.server import FastMCP
 from gvm.errors import GvmError, RequiredArgument
 from pydantic import Field
 
-from src.models.generated import task
 from src.services.gvm_client import GvmClient
 import src.constants as const
 

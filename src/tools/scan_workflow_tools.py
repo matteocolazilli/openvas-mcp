@@ -10,9 +10,9 @@ from fastmcp.server import FastMCP
 from gvm.errors import GvmError, RequiredArgument
 from pydantic import Field
 
-import src.tools.constants as const
+import src.tools.utils.constants as const
 from src.services.gvm_client import GvmClient
-from src.tools._scan_workflow_helpers import (
+from src.tools.utils.helpers import (
     _build_txt_report_output,
     _default_target_name,
     _extract_delta_counts,
@@ -263,8 +263,6 @@ def register_scan_workflow_tools(
 
         try:
             get_tasks_response = gvm_client.get_tasks()
-        except RequiredArgument as exc:
-            raise ToolError(f"Missing required argument: {exc.argument}") from exc
         except GvmError as exc:
             raise ToolError(f"Failed to retrieve task: {str(exc)}") from exc
 

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Matteo Colazilli
 
+import logging
 from typing import Annotated, Any
 
 from fastmcp.exceptions import ToolError
@@ -9,6 +10,8 @@ from gvm.errors import GvmError, RequiredArgument
 from pydantic import Field
 
 from src.services.gvm_client import GvmClient
+
+logger = logging.getLogger(__name__)
 
 
 def register_inspection_control_tools(
@@ -35,7 +38,8 @@ def register_inspection_control_tools(
 
         try:
             response = gvm_client.get_targets()
-        except GvmError as exc:
+        except Exception as exc:
+            logger.error("Error in get_targets: %s", exc)
             raise ToolError(str(exc)) from exc
 
         targets = response.target

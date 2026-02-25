@@ -237,8 +237,8 @@ def _summarize_report_metadata(report: models.Report | None) -> dict[str, Any] |
 
     task: models.Task | None = _extract_report_content_item(report, models.Task)
     creation_time = _extract_report_content_item(report, report.CreationTime)
-    scan_start = str(report.ScanStart)
-    scan_end = str(report.ScanEnd)
+    scan_start = _extract_report_datetime(report, report.ScanStart)
+    scan_end = _extract_report_datetime(report, report.ScanEnd)
 
     return {
         "id": report.id,

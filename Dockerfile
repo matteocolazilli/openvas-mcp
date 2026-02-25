@@ -17,6 +17,6 @@ ENV UV_CACHE_DIR=/tmp/.cache/uv
 
 RUN uv sync --no-dev
 
-COPY ./src ./src
+COPY --chown=mcp:mcp ./src ./src
 
 CMD ["uv", "run", "--no-dev", "-m", "src.main"]

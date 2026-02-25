@@ -44,11 +44,10 @@ def register_vm_workflow_tools(
         title="Start scan",
         description="""
         Create the minimal target/task resources and start a focused vulnerability scan.
-        The scan will use the OpenVAS scanner, "Full and fast" scan configuration, 
+
+        The scan will use the default "Full and fast" scan configuration, 
         and "All IANA assigned TCP ports" port list (if not overridden).
         Returns a dictionary containing the target ID, task ID, and report ID.
-
-        Use this tool when the user wants to quickly scan specific hosts with minimal setup.
 
         Note: This tool does not wait for scan completion; use "scan_status" tool to poll for status.
         """,
@@ -91,6 +90,7 @@ def register_vm_workflow_tools(
             Field(
                 description="""
                 Optional ID of an existing port list to use for the target.
+                
                 If not provided, the default 'All IANA assigned TCP ports' port list is used.
                 """
             ),
@@ -109,23 +109,17 @@ def register_vm_workflow_tools(
 
         target_name = target_name or _default_target_name(hosts)
 
-        port_list_id = (
-            port_list_id
-            if port_list_id
-            else (
-                None if port_ranges_list else const.ALL_IANA_ASSIGNED_TCP_PORT_LIST_ID
-            )
-        )
+        if port_list_id:
+            port_ranges_list = None
+        elif not port_list_id and not port_ranges_list:
+            port_list_id = const.ALL_IANA_ASSIGNED_TCP_PORT_LIST_ID
+
 
         create_target_kwargs: dict[str, Any] = {
             "name": target_name,
             "hosts": hosts,
-            "port_range": port_ranges_list if port_ranges_list else None,
+            "port_range": port_ranges_list,
             "port_list_id": port_list_id
-            if port_list_id
-            else (
-                None if port_ranges_list else const.ALL_IANA_ASSIGNED_TCP_PORT_LIST_ID
-            ),
         }
 
         try:
@@ -267,7 +261,7 @@ def register_vm_workflow_tools(
             raise ToolError(f"Failed to retrieve task: {str(exc)}") from exc
 
         tasks = get_tasks_response.task
-        task = next((t for t in tasks if t.target.id == target_id), None)
+        task = next((t for t in tasks if t.target and t.target.id == target_id), None)
         if not task:
             raise ToolError(f"No tasks found for target ID {target_id}.")
 

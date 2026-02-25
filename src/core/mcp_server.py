@@ -31,14 +31,14 @@ def _format_gvm_config_error(ex: ValidationError) -> str:
     return "Failed to load GVM configuration: invalid settings."
 
 
-class _GreenboneInitMiddleware(Middleware):
+class GreenboneInitMiddleware(Middleware):
     def __init__(self, server: "GreenboneMCP"):
         self.server = server
 
     async def on_initialize(self, context: MiddlewareContext, call_next):
 
         try:
-            self.server.ensure_ready()
+            self.server.init()
         except McpError:
             raise  # Re-raise McpError to signal initialization failure
         except ValidationError as ex:
@@ -66,10 +66,10 @@ class GreenboneMCP(FastMCP):
         self._gvm_ready = False
         self._tools_registered = False
 
-        self.add_middleware(_GreenboneInitMiddleware(self))
+        self.add_middleware(GreenboneInitMiddleware(self))
 
 
-    def ensure_ready(self) -> None:
+    def init(self) -> None:
         """Initialize config/client."""
         if self._gvm_ready:
             return

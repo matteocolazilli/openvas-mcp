@@ -24,7 +24,7 @@ from src.tools.utils.helpers import (
 # Main tool registration function
 
 
-def register_scan_workflow_tools(
+def register_vm_workflow_tools(
     mcp: FastMCP,
     gvm_client: GvmClient,
 ) -> None:

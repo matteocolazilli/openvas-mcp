@@ -247,8 +247,8 @@ class GvmClient:
 
                 result: etree.Element = command(**kwargs)
                 return result
-        except GvmError:
-            logger.exception("GMP call %s failed", method_name)
+        except GvmError as err:
+            logger.exception("GMP call %s failed: %s", method_name, str(err))
             raise
 
     def _xml_text(self, root: etree.Element) -> str:
@@ -275,6 +275,17 @@ class GvmClient:
             T: Parsed model instance.
         """
         return self._xml_parser.parse(root, clazz=cls)
+
+    def authenticate(self) -> models.AuthenticateResponse:
+        """
+        Authenticate with the GMP server.
+
+        Returns:
+            models.AuthenticateResponse: Authentication response payload.
+        """
+        with Gmp(connection=self._connection, transform=self._transform) as gmp:            
+            response = gmp.authenticate(username=self._username, password=self._password)
+        return self._parse(response, models.AuthenticateResponse)
 
     def get_targets(
         self,

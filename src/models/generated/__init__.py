@@ -2,6 +2,7 @@ from src.models.generated.alive_tests import AliveTests
 from src.models.generated.apps import Apps
 from src.models.generated.asset_count import AssetCount
 from src.models.generated.assets import Assets
+from src.models.generated.authenticate_response import AuthenticateResponse
 from src.models.generated.closed_cves import ClosedCves
 from src.models.generated.config import Config
 from src.models.generated.config_count import ConfigCount
@@ -97,6 +98,7 @@ __all__ = [
     "Apps",
     "AssetCount",
     "Assets",
+    "AuthenticateResponse",
     "ClosedCves",
     "Config",
     "ConfigCount",

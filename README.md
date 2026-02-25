@@ -49,14 +49,14 @@ src/
 ├── main.py                     # App entrypoint (stdio MCP server)
 ├── constants.py                # Default UUIDs and report format constants
 ├── config/
-│   ├── gvm_client_config.py    # Env-based GVM client settings (GMP_USERNAME, GMP_PASSWORD, ...)
+│   ├── gvm_client_config.py    # Env-based GVM client settings (USERNAME, PASSWORD, ...)
 │   └── logging_config.py       # Logging configuration settings
 ├── core/
 │   └── mcp_server.py           # MCP wiring, GVM connection, tool registration
 ├── services/
 │   └── gvm_client.py           # Typed wrapper around python-gvm + XML parsing
 ├── tools/
-│   ├── scan_workflow_tools.py      # High-level scan orchestration tools
+│   ├── vm_workflow_tools.py      # VM workflow orchestration tools
 │   ├── inspection_control_tools.py # Inspection/control tools for existing scan state
 │   └── utils/
 │       ├── constants.py            # Tool-scoped constants (scanner/config/port list IDs, formats)
@@ -119,8 +119,8 @@ You can use this `.env` by passing it at runtime with `--env-file` to the `docke
 
 The server reads configuration from the following environment variables, which if not set it falls back to defaults:
 
-- `GMP_USERNAME`: GMP username (default: `admin`)
-- `GMP_PASSWORD`: GMP password (required: no default, must be set)
+- `USERNAME`: GMP username (default: `admin`)
+- `PASSWORD`: GMP password (required: no default, must be set)
 - `LOG_LEVEL`: application log level (default: `INFO`)
 
 ### 4) Configure the MCP client and run the server

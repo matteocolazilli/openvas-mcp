@@ -38,69 +38,42 @@ class GreenboneInitMiddleware(Middleware):
     async def on_initialize(self, context: MiddlewareContext, call_next):
 
         try:
-            self.server.init()
-        except McpError:
-            raise  # Re-raise McpError to signal initialization failure
+            gvm_client_config = GvmClientConfig()
+
+            self.server._gvm_client = GvmClient(
+                username=gvm_client_config.USERNAME,
+                password=gvm_client_config.PASSWORD.get_secret_value(),
+            )
+            
+            self.server._gvm_client.authenticate()
+
         except ValidationError as ex:
+            self.server._gvm_client = None
             msg = _format_gvm_config_error(ex)
             logger.error(msg)
             raise McpError(ErrorData(code=INTERNAL_ERROR, message=msg))
+        except GvmResponseError as ex:
+            self.server._gvm_client = None
+            if "Authentication failed" in str(ex):
+                raise McpError(ErrorData(code=INTERNAL_ERROR, message="Failed to authenticate with GVM: wrong credentials."))
+            raise McpError(ErrorData(code=INTERNAL_ERROR, message=f"Failed to authenticate with GVM: {ex}"))
         except Exception as ex:
-            msg = f"Failed to initialize Greenbone backend: {ex}"
-            logger.exception(msg)
-            raise McpError(ErrorData(code=INTERNAL_ERROR, message=msg))
-        
-        # If initialization succeeds, continue processing the request
+            self.server._gvm_client = None  
+            logger.exception("Failed to initialize Greenbone backend: %s", ex)
+            raise McpError(ErrorData(code=INTERNAL_ERROR, message=f"Failed to initialize Greenbone backend: {ex}"))
+
+        register_inspection_control_tools(self.server, self.server._gvm_client)
+        register_vm_workflow_tools(self.server, self.server._gvm_client)
+
+        logger.info("Greenbone backend initialized successfully.")
         await call_next(context)
 
 
 class GreenboneMCP(FastMCP):
-    """
-    MCP server for Greenbone/OpenVAS integration.
-    """
-
     def __init__(self, name: str, *args, **kwargs):
         super().__init__(name, *args, **kwargs)
-
         self._gvm_client: Optional[GvmClient] = None
-        self._gvm_ready = False
-        self._tools_registered = False
-
         self.add_middleware(GreenboneInitMiddleware(self))
-
-
-    def init(self) -> None:
-        """Initialize config/client."""
-        if self._gvm_ready:
-            return
-
-        gvm_client_config = GvmClientConfig()
-
-        username = gvm_client_config.USERNAME
-        password = gvm_client_config.PASSWORD.get_secret_value()
-
-        self._gvm_client = GvmClient(
-            username=username,
-            password=password,
-        )
-        
-        try:
-            self._gvm_client.authenticate()
-        except GvmResponseError as ex:
-            self._gvm_client = None  # Ensure client is not set if authentication fails
-            if "Authentication failed" in str(ex):
-                raise McpError(ErrorData(code=INTERNAL_ERROR, message="Failed to authenticate with GVM: wrong credentials."))
-            else:
-                raise McpError(ErrorData(code=INTERNAL_ERROR, message=f"Failed to authenticate with GVM: {ex}"))
-            
-        if not self._tools_registered:
-            register_inspection_control_tools(self, self._gvm_client)
-            register_vm_workflow_tools(self, self._gvm_client)
-            self._tools_registered = True
-
-        self._gvm_ready = True
-        logger.info("Greenbone backend initialized successfully.")
-        
 
     @property
     def gvm(self) -> GvmClient:

@@ -49,13 +49,11 @@ def _summarize_task_status(task: models.Task) -> dict[str, Any]:
     """
     target = task.target
 
-    target_summary = None
-    if target is not None:
-        target_summary = {
-            "id": target.id,
-            "name": target.name,
-            "hosts": target.hosts,
-        }
+    target_summary = None if target is None else {
+    "id": target.id, 
+    "name": target.name, 
+    "hosts": target.hosts,
+    }
 
     task_summary = {
         "id": task.id,
@@ -65,12 +63,10 @@ def _summarize_task_status(task: models.Task) -> dict[str, Any]:
         "result_count": task.result_count,
     }
 
-    return _remove_none_values(
-        {
+    return {
             "task": task_summary,
             "target": target_summary,
         }
-    )
 
 
 def _remove_none_values(obj: Any) -> Any:

@@ -192,9 +192,6 @@ def register_vm_workflow_tools(
     )
     async def fetch_latest_report(
         task_id: Annotated[str, Field(description="The ID of the scan task.")],
-        include_details: Annotated[
-            bool, Field(description="Whether to include full results in the report.")
-        ] = True,
     ) -> dict[str, Any]:
 
         try:
@@ -232,43 +229,39 @@ def register_vm_workflow_tools(
         if not report:
             raise ToolError(f"No reports are available yet for task {task_id}.")
 
-        report_csv = _extract_report_text(report)
+        report_txt = _extract_report_text(report)
 
         output = _build_txt_report_output(
             report,
-            report_csv,
-            include_full_text=include_details,
+            report_txt
         )
 
         return _remove_none_values(output)
 
     @mcp.tool(
-        name="rescan_target",
-        title="Rescan target",
-        description="""Initiate a new scan on an existing target by relaunching the latest related task.
-        Useful for quickly rescanning the same target without needing to create a new task or target.
+        name="restart_scan",
+        title="Restart scan",
+        description="""Restart a new scan associated with an existing task.
+
+        Useful to perform a scan on an already created task and its associated target without needing to create a new task.
         Returns a dictionary containing the target ID, task ID, and new report ID for the rescan task.""",
     )
-    async def rescan_target(
-        target_id: Annotated[
-            str, Field(description="The ID of the target to be rescanned.")
+    async def restart_scan(
+        task_id: Annotated[
+            str, Field(description="The ID of the task to be restarted.")
         ],
     ) -> dict[str, Any]:
-
+        
         try:
-            get_tasks_response = gvm_client.get_tasks()
+            get_tasks_response = gvm_client.get_task(task_id=task_id)
         except GvmError as exc:
             raise ToolError(f"Failed to retrieve task: {str(exc)}") from exc
 
-        tasks = get_tasks_response.task
-        task = next((t for t in tasks if t.target and t.target.id == target_id), None)
+        task = get_tasks_response.task[0] if get_tasks_response.task else None
+    
         if not task:
-            raise ToolError(f"No tasks found for target ID {target_id}.")
-
-        task_id = task.id
-        target_id = task.target.id
-        target_name = task.target.name
-
+            raise ToolError(f"No tasks found for task ID {task_id}.")
+        
         try:
             start_task_response = gvm_client.start_task(task_id=task_id)
         except GvmError as exc:
@@ -276,19 +269,25 @@ def register_vm_workflow_tools(
 
         new_report_id = start_task_response.report_id
 
-        return {
+        task_id = task.id
+        task_name = task.name if task.name else None
+        
+        target_id = task.target.id if task.target and task.target.id else None
+        target_name = task.target.name if task.target and task.target.name else None
+
+        return _remove_none_values({
             "target": {
                 "id": target_id,
                 "name": target_name,
             },
             "task": {
                 "id": task_id,
-                "name": task.name,
-                "scan_config_id": task.config.id,
-                "scanner_id": task.scanner.id,
+                "name": task_name,
+                "scan_config_id": const.FULL_AND_FAST_SCAN_CONFIG_ID,
+                "scanner_id": const.OPENVAS_SCANNER_ID,
             },
             "report": {"report_id": new_report_id},
-        }
+        })
 
     @mcp.tool(
         name="delta_report",
@@ -358,14 +357,11 @@ def register_vm_workflow_tools(
         report_text = _extract_report_text(report)
         result = {}
 
-        result["delta_summary"] = {
+        result["delta_report"] = {
+            "task_id": task_id,
             "base_report_id": last_report_id,
             "delta_report_id": previous_report_id,
-            "counts": _extract_delta_counts(report_text) if report_text else {},
+            "delta_report_txt": report_text,
         }
-        if full_details:
-            result["detailed_delta_report"] = _build_txt_report_output(
-                report, report_text
-            )
 
         return _remove_none_values(result)

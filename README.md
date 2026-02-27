@@ -29,7 +29,7 @@ These are always registered:
 - `start_scan`
 - `scan_status`
 - `fetch_latest_report`
-- `rescan_target`
+- `restart_scan`
 - `delta_report`
 
 ### Inspection / control tools

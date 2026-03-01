@@ -305,10 +305,6 @@ def register_vm_workflow_tools(
                 description="The ID of the task for which to generate the delta report."
             ),
         ],
-        full_details: Annotated[
-            bool,
-            Field(description="Whether to include full details of the delta report."),
-        ] = False,
     ) -> dict[str, Any]:
 
         try:

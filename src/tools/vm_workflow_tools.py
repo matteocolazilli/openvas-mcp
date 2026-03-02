@@ -84,7 +84,7 @@ def register_vm_workflow_tools(
                 If not provided, the default 'All IANA assigned TCP ports' port list is used.
                 """
             ),
-        ],
+        ] = None,
         port_list_id: Annotated[
             Optional[str],
             Field(
@@ -94,7 +94,7 @@ def register_vm_workflow_tools(
                 If not provided, the default 'All IANA assigned TCP ports' port list is used.
                 """
             ),
-        ],
+        ] = None,
         target_name: Annotated[
             Optional[str],
             Field(
@@ -104,7 +104,7 @@ def register_vm_workflow_tools(
                 If not provided, a name will be generated based on the hosts.
                 """,
             ),
-        ],
+        ] = None,
     ) -> dict[str, Any]:
 
         target_name = target_name or _default_target_name(hosts)
